@@ -24,8 +24,6 @@ def create_streamer_1():
     streamer = EthercatClientDataStreamer(name=my_name, domain='hoanglong-desktop',\
          password=my_password, ethercat_client=client)
     streamer.run()
-    time.sleep(5)
-    #streamer.addPeer(peer_name)
     print('streamer 1 run')
     streamer.waitTillStopped()
     print('streamer 1 done')
@@ -44,7 +42,7 @@ def create_streamer_2():
     streamer_2 = DictionaryDataStreamer(name=my_name, domain='hoanglong-desktop',\
          password=my_password)
     streamer_2.addReceiveMessageHandler(receiveMessageHandler)
-    streamer_2.run()
+    streamer_2.connect()
     time.sleep(5)
     #streamer_2.addPeer(peer_name)
     print('streamer 2 run')
@@ -53,10 +51,10 @@ def create_streamer_2():
     
 if __name__ == "__main__":
     p = threading.Thread(target=create_streamer_1)
-    p_2 = threading.Thread(target=create_streamer_2)
+    #p_2 = threading.Thread(target=create_streamer_2)
     p.start()
-    p_2.start()
+    #p_2.start()
     p.join()
-    p_2.join()
+    #p_2.join()
     print('done')
     pass

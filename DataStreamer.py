@@ -10,20 +10,15 @@ class DataStreamer:
         self.name = kwargs['name']
         self.domain_name = kwargs['domain']
         self.jid = self.name + '@' + self.domain_name
-        password = kwargs['password']
-        self.client_xmpp = ClientXMPP(self.jid, password)
-        self.client_xmpp.add_event_handler('session_start', self.handleConnected)
-        self.client_xmpp.add_event_handler('message', self.handleIncomingMessage)
-        self.client_xmpp.add_event_handler('presence_subscribe', self.handleSubscribe)
-        self.client_xmpp.add_event_handler('presence_subscribed', self.handleSubscribed)
-        self.client_xmpp.add_event_handler('presence_available', self.handleAvailable)
-        self.client_xmpp.add_event_handler('presence_unavailable', self.handleUnavailable)
+        self.password = kwargs['password']
+        self.client_xmpp = None
         #self.client_xmpp.register_handler(Callback('command handler', StanzaPath('iq@type=set/set'),self.iqCommandHandler))
         self.peer_list = []
         self.online_peer = []
         self.receive_message_handler_list = []
         self.receive_command_handler_list = []
         self.connected = False
+        self.is_first_connect = True
 
     def sendCommand(self, command):
         command_dict = {'command': command}
@@ -33,11 +28,20 @@ class DataStreamer:
         print(iq['body'])
         pass
 
-    def run(self):
-        self.client_xmpp.connect()
-        self.client_xmpp.process(block=False)
+    def connect(self):
+        if self.client_xmpp == None:
+            self.client_xmpp = ClientXMPP(self.jid, self.password)
+            self.client_xmpp.add_event_handler('session_start', self.handleConnected)
+            self.client_xmpp.add_event_handler('message', self.handleIncomingMessage)
+            self.client_xmpp.add_event_handler('presence_subscribe', self.handleSubscribe)
+            self.client_xmpp.add_event_handler('presence_subscribed', self.handleSubscribed)
+            self.client_xmpp.add_event_handler('presence_available', self.handleAvailable)
+            self.client_xmpp.add_event_handler('presence_unavailable', self.handleUnavailable)
+            self.client_xmpp.connect()
+            self.client_xmpp.process(block=False)
 
     def handleConnected(self, event):
+        print('handling connected')
         self.client_xmpp.send_presence()
         #self.client_xmpp.presences_received.wait(5)
         self.client_xmpp.get_roster()
@@ -105,4 +109,6 @@ class DataStreamer:
 
     def stop(self):
         self.client_xmpp.disconnect(wait=True)
+        self.client_xmpp = None
+
 

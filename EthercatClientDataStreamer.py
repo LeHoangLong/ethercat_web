@@ -9,7 +9,7 @@ class EthercatClientDataStreamer(DictionaryDataStreamer):
         self.stopped = False
 
     def run(self):
-        super().run()
+        super().connect()
         self.addCommandHandler(self.dataStreamerCommandHandler)
         self.ethercat_client.addDataHandler(self.ethercatClientDataHandler)
         self.ethercat_client.run()
