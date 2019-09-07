@@ -59,7 +59,8 @@ class clientHandler():
         self.control_channel = control_channel
         self.emergency_channel = emergency_channel
         self.stop = False
-            
+        self.mean_speed = 1
+
     def run(self):
         self.stop = False
         threading.Thread(target=self.dataChannelHandler, args=()).start()
@@ -72,8 +73,8 @@ class clientHandler():
         conn, addr = self.data_channel.accept()
         data_1 = 0
         while not self.stop:
-            data_2 = random.random()
-            data_1 += 1
+            data_2 = random.random() + self.mean_speed
+            data_1 += self.mean_speed
             message = ET.Element('data')
             time_element = ET.SubElement(message, 'item')
             time_element.text = str(time.time() * 1000)
@@ -106,6 +107,12 @@ class clientHandler():
                 if command.text == 'stop':
                     self.stop = True
                     print('stopped')
+                if command.attrib['to'] == 'motor':
+                    if command.text == 'decelerate':
+                        self.mean_speed -= 1
+                    elif command.text == 'accelerate':
+                        self.mean_speed += 1
+
         self.control_channel.close()
         print('control channel stopped')
 

@@ -37,6 +37,12 @@ class Worker(QThread):
             i += 1
         self.streamer.sendCommand(command_to_send)
 
+    @pyqtSlot(tuple)
+    def command_send_handler(self, command_list):
+        for command in command_list:
+            #print(command)
+            self.streamer.sendCommand(command)
+
     @pyqtSlot(str)
     def remove_watch_button_clicked(self, data_name):
         command_to_send = 'remove_watch_' + data_name
@@ -48,6 +54,8 @@ class Worker(QThread):
 class Ui_Dialog(QObject):
     connect_or_disconnect_signal = pyqtSignal(str)
     refresh_watch_list_signal = pyqtSignal(tuple)
+    command_send_signal = pyqtSignal(tuple)
+
     def __init__(self):
         super().__init__()
 
@@ -87,31 +95,35 @@ class Ui_Dialog(QObject):
         self.available_data_type_list = QtWidgets.QListWidget(self.select_data_frame)
         self.available_data_type_list.setGeometry(QtCore.QRect(10, 10, 151, 101))
         self.available_data_type_list.setObjectName("available_data_type_list")
-        self.available_data_type_list.addItem('sensor1')
-        self.available_data_type_list.addItem('sensor2')
-        self.available_data_type_list.addItem('time')
         self.item_activated = {'sensor1': False, 'sensor2': False, 'time': False}
+        self.command_activated = {'motor_decelerate': False, 'motor_accelerate': False}
         self.available_data_type_list.itemActivated.connect(self.data_list_activated)
         self.command_frame = QtWidgets.QFrame(Dialog)
         self.command_frame.setGeometry(QtCore.QRect(340, 220, 171, 171))
         self.command_frame.setFrameShape(QtWidgets.QFrame.StyledPanel)
         self.command_frame.setFrameShadow(QtWidgets.QFrame.Raised)
         self.command_frame.setObjectName("command_frame")
-        self.command_list = QtWidgets.QListView(self.command_frame)
+        self.command_list = QtWidgets.QListWidget(self.command_frame)
         self.command_list.setGeometry(QtCore.QRect(10, 10, 151, 121))
         self.command_list.setObjectName("command_list")
+        self.command_list.itemActivated.connect(self.command_activated_handler)
+        for k in self.command_activated.keys():
+            self.command_list.addItem(k)
+        for k in self.item_activated.keys():
+            self.available_data_type_list.addItem(k)
         self.command_send_button = QtWidgets.QPushButton(self.command_frame)
         self.command_send_button.setGeometry(QtCore.QRect(10, 140, 151, 25))
         self.command_send_button.setObjectName("command_send_button")
+        self.command_send_button.clicked.connect(self.command_send_button_clicked_handler)
 
         self.connect_or_disconnect_signal.connect(self.worker.connect_button_clicked)
         self.refresh_watch_list_signal.connect(self.worker.refresh_watch_list)
+        self.command_send_signal.connect(self.worker.command_send_handler)
 
         self.disconnect = True
         self.retranslateUi(Dialog)
         QtCore.QMetaObject.connectSlotsByName(Dialog)
 
-        data = np.random.randn(5000)
         self.plot_widget_1 = pg.PlotWidget()
         self.plot_widget_1.enableAutoRange()
         self.plot_widget_2 = pg.PlotWidget()
@@ -164,6 +176,23 @@ class Ui_Dialog(QObject):
         watch_tuple = tuple(self.requested_items)
         self.refresh_watch_list_signal.emit(watch_tuple)
         pass
+
+    def command_activated_handler(self, item):
+        self.command_activated[item.text()] = not self.command_activated[item.text()]
+        font = QFont()
+        if self.command_activated[item.text()] == True:
+            font.setBold(True)
+        else:
+            font.setBold(False)
+        item.setFont(font)
+    
+    def command_send_button_clicked_handler(self):
+        self.command_list = []
+        for k, v in self.command_activated.items():
+            if v == True:
+                self.command_list.append(k)
+        command_tuple = tuple(self.command_list)
+        self.command_send_signal.emit(command_tuple)
 
     @pyqtSlot(dict)
     def data_received_handler(self, data):

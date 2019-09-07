@@ -19,7 +19,7 @@ class EthercatClientDataStreamer(DictionaryDataStreamer):
         #print('ethercatClientDataHandler: ' + str(data))
         if type(data) is not dict:
             raise ValueError
-        print(data)
+        #print(data)
         to_send_data = {k: data[k] for k in self.requested_data}
         self.sendData(to_send_data)
 
@@ -32,6 +32,12 @@ class EthercatClientDataStreamer(DictionaryDataStreamer):
             for data_to_add in command_split_list[2:]:
                 if data_to_add not in self.requested_data:
                     self.requested_data.append(data_to_add)
+        elif 'motor_decelerate' in command:
+            self.ethercat_client.sendToEthercat(node_name='motor', command='decelerate')
+        elif 'motor_accelerate' in command:
+            self.ethercat_client.sendToEthercat(node_name='motor', command='accelerate')
+            
+
 
     def waitTillStopped(self):
         while self.stopped == False:
