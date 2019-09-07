@@ -65,8 +65,8 @@ class EthercatClient():
                     if message.tag == 'data':
                         for item in message.findall('item'):
                             self.data_packet[item.attrib['type']] = item.text
-                            for callback in self.callback_list:
-                                callback(self.data_packet)    
+                        for callback in self.callback_list:
+                            callback(self.data_packet)    
                     elif message.tag == 'close':
                         self.data_socket.close()
                     string_segment = b''

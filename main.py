@@ -44,9 +44,9 @@ def create_streamer_2():
     streamer_2.addReceiveMessageHandler(receiveMessageHandler)
     streamer_2.connect()
     time.sleep(5)
-    #streamer_2.addPeer(peer_name)
     print('streamer 2 run')
-    streamer_2.sendCommand('stop')
+    streamer_2.sendCommand('add_watch_sensor1')
+    time.sleep(100)
     streamer_2.stop()
     
 if __name__ == "__main__":

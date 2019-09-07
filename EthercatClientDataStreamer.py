@@ -7,6 +7,7 @@ class EthercatClientDataStreamer(DictionaryDataStreamer):
         super().__init__(*args, **kwargs)
         self.ethercat_client = kwargs['ethercat_client']
         self.stopped = False
+        self.requested_data = []
 
     def run(self):
         super().connect()
@@ -18,11 +19,19 @@ class EthercatClientDataStreamer(DictionaryDataStreamer):
         #print('ethercatClientDataHandler: ' + str(data))
         if type(data) is not dict:
             raise ValueError
-        self.sendData(data)
+        print(data)
+        to_send_data = {k: data[k] for k in self.requested_data}
+        self.sendData(to_send_data)
 
     def _commandHandler(self, command):
         if command == 'stop':
             self.stop()
+        elif 'add_watch' in command:
+            command_split_list = command.split('_')
+            self.requested_data = []
+            for data_to_add in command_split_list[2:]:
+                if data_to_add not in self.requested_data:
+                    self.requested_data.append(data_to_add)
 
     def waitTillStopped(self):
         while self.stopped == False:

@@ -59,13 +59,15 @@ class DataStreamer:
 
     def handleIncomingMessage(self, message):
         print(message['body'])
-        if 'command' in str(message['body']):
-            for handler in self.receive_command_handler_list:
-                handler(message['body'])
-        else:
-            for handler in self.receive_message_handler_list:
-                handler(message)
-        pass
+        message_list = str(message['body']).split(';')
+        for message_unit in message_list:
+            if 'command' in str(message_unit):
+                for handler in self.receive_command_handler_list:
+                    handler(message_unit)
+            else:
+                for handler in self.receive_message_handler_list:
+                    handler(message_unit)
+            pass
 
     def sendData(self, data):
         for peer in self.peer_list:
@@ -87,7 +89,6 @@ class DataStreamer:
         self.client_xmpp.send_presence_subscription(pto=peer, ptype='subscribe')
 
     def handleSubscribe(self, presence):
-        print('in subscribe')
         self.client_xmpp.update_roster(presence['from'])
         self.client_xmpp.send_presence_subscription(pto=presence['from'], ptype='subscribed')
 

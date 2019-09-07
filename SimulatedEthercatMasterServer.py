@@ -70,17 +70,20 @@ class clientHandler():
 
     def dataChannelHandler(self):
         conn, addr = self.data_channel.accept()
-        data = 0
+        data_1 = 0
         while not self.stop:
-            #data = random.random()
-            data += 1
+            data_2 = random.random()
+            data_1 += 1
             message = ET.Element('data')
             time_element = ET.SubElement(message, 'item')
             time_element.text = str(time.time() * 1000)
             time_element.attrib['type'] = 'time'
             data_element = ET.SubElement(message, 'item')
-            data_element.text = str(data)
-            data_element.attrib['type'] = 'sensor'
+            data_element.text = str(data_1)
+            data_element.attrib['type'] = 'sensor1'
+            data_element = ET.SubElement(message, 'item')
+            data_element.text = str(data_2)
+            data_element.attrib['type'] = 'sensor2'
             message = ET.tostring(message) + b'\0'
             #print(message)
             conn.sendall(message)
