@@ -18,12 +18,13 @@ def create_streamer_1():
     my_password = 'xmpp.jp'
     #domain_name = '35.189.58.5'
     my_name = 'long'
-    peer_name = 'long_2@hoanglong'
+    peer_name = 'long_2@35.244.75.175'
     my_password = '123'
     client = EthercatClient(server_name='localhost', server_port=1025)
-    streamer = EthercatClientDataStreamer(name=my_name, domain='hoanglong-desktop',\
+    streamer = EthercatClientDataStreamer(name=my_name, domain='35.244.75.175',\
          password=my_password, ethercat_client=client)
     streamer.run()
+    #streamer.addPeer(peer_name)
     print('streamer 1 run')
     streamer.waitTillStopped()
     print('streamer 1 done')
@@ -35,14 +36,15 @@ def create_streamer_2():
     #domain_name = '35.189.58.5'
     #domain_name = 'hoanglong-desktop'
     my_name = 'long_2'
-    peer_name = 'long@hoanglong'
+    peer_name = 'long@35.244.75.175'
     my_password = '123'
 
     #streamer_2 = DictionaryDataStreamer(jid=my_name, password=my_password)
-    streamer_2 = DictionaryDataStreamer(name=my_name, domain='hoanglong-desktop',\
+    streamer_2 = DictionaryDataStreamer(name=my_name, domain='35.244.75.175',\
          password=my_password)
     streamer_2.addReceiveMessageHandler(receiveMessageHandler)
     streamer_2.connect()
+    streamer_2.addPeer(peer_name)
     time.sleep(5)
     print('streamer 2 run')
     streamer_2.sendCommand('add_watch_sensor1')

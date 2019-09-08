@@ -7,28 +7,26 @@
 # WARNING! All changes made in this file will be lost!
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtGui import *
 import DictionaryDataStreamer as Streamer
-from PyQt5.QtCore import *
 import time
 import pyqtgraph.pyqtgraph as pg
 import numpy as np
 
-class Worker(QThread):
-    data_receive_signal = pyqtSignal(dict)
+class Worker(QtCore.QThread):
+    data_receive_signal = QtCore.pyqtSignal(dict)
     def __init__(self, streamer):
         super(Worker, self).__init__()
         self.streamer = streamer
         self.streamer.addReceiveMessageHandler(self.receive_message_handler)
 
-    @pyqtSlot(str)
+    @QtCore.pyqtSlot(str)
     def connect_button_clicked(self, click_type):
         if click_type == 'connect':
             self.streamer.connect()
         else:
             self.streamer.stop()
 
-    @pyqtSlot(tuple)
+    @QtCore.pyqtSlot(tuple)
     def refresh_watch_list(self, data_names):
         command_to_send = 'add_watch'
         i = 0
@@ -37,13 +35,13 @@ class Worker(QThread):
             i += 1
         self.streamer.sendCommand(command_to_send)
 
-    @pyqtSlot(tuple)
+    @QtCore.pyqtSlot(tuple)
     def command_send_handler(self, command_list):
         for command in command_list:
             #print(command)
             self.streamer.sendCommand(command)
 
-    @pyqtSlot(str)
+    @QtCore.pyqtSlot(str)
     def remove_watch_button_clicked(self, data_name):
         command_to_send = 'remove_watch_' + data_name
         self.streamer.sendCommand(command_to_send)
@@ -51,20 +49,20 @@ class Worker(QThread):
     def receive_message_handler(self, data):
         self.data_receive_signal.emit(data)
 
-class Ui_Dialog(QObject):
-    connect_or_disconnect_signal = pyqtSignal(str)
-    refresh_watch_list_signal = pyqtSignal(tuple)
-    command_send_signal = pyqtSignal(tuple)
+class Ui_Dialog(QtCore.QObject):
+    connect_or_disconnect_signal = QtCore.pyqtSignal(str)
+    refresh_watch_list_signal = QtCore.pyqtSignal(tuple)
+    command_send_signal = QtCore.pyqtSignal(tuple)
 
     def __init__(self):
         super().__init__()
 
     def setupUi(self, Dialog):
-        self.streamer = Streamer.DictionaryDataStreamer(name='long_2', domain='hoanglong-desktop',\
+        self.streamer = Streamer.DictionaryDataStreamer(name='long_2', domain='35.244.75.175',\
              password='123')
 
         self.worker = Worker(self.streamer)
-        self.thread_obj = QThread()
+        self.thread_obj = QtCore.QThread()
         self.worker.moveToThread(self.thread_obj)
         self.thread_obj.start()
         self.curve_dict = {}
@@ -161,7 +159,7 @@ class Ui_Dialog(QObject):
 
     def data_list_activated(self, item):
         self.item_activated[item.text()] = not self.item_activated[item.text()]
-        font = QFont()
+        font = QtGui.QFont()
         if self.item_activated[item.text()] == True:
             font.setBold(True)
         else:
@@ -179,7 +177,7 @@ class Ui_Dialog(QObject):
 
     def command_activated_handler(self, item):
         self.command_activated[item.text()] = not self.command_activated[item.text()]
-        font = QFont()
+        font = QtGui.QFont()
         if self.command_activated[item.text()] == True:
             font.setBold(True)
         else:
@@ -194,7 +192,7 @@ class Ui_Dialog(QObject):
         command_tuple = tuple(self.command_list)
         self.command_send_signal.emit(command_tuple)
 
-    @pyqtSlot(dict)
+    @QtCore.pyqtSlot(dict)
     def data_received_handler(self, data):
         for data_name, data_val in data.items():
             if data_name != 'time':
