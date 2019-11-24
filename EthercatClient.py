@@ -13,17 +13,21 @@ class EthercatClient():
         server_port = kwargs['server_port']
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((server_name, server_port))
+        self.control_idx = 0
         print("connected")
         connect_request = ET.Element('xml')
         dispatcher_server_node = ET.SubElement(connect_request, 'dispatcher_server')
         control_node = ET.SubElement(dispatcher_server_node, 'control')
         control_node.attrib['value'] = 'login'
+        idx_node = ET.SubElement(control_node, "idx")
+        idx_node.attrib['value'] = str(self.control_idx)
         source_node = ET.SubElement(control_node, 'source')
         source_node.attrib['value'] = 'host'
         username_node = ET.SubElement(control_node, 'username')
         username_node.attrib["value"] = 'test_username'
         password_node = ET.SubElement(control_node, 'password')
         password_node.attrib["value"] = 'test_password'
+        
         ET.dump(connect_request)
         self.socket.sendall(ET.tostring(connect_request) + b'\x00')
         replies = b""
@@ -46,11 +50,12 @@ class EthercatClient():
                                 print(result_node.attrib['value'])
                                 print('close socket')
                                 self.socket.close()
-                        
+                            else:
+                                print('connected')
             replies = replies[replies.find(b'\x00') + 1:]
         self.stop = False
         self.callback_map = {}
-
+        
     def disconnect(self):
         command = ET.Element('xml')
         control = ET.SubElement(command, 'control')
@@ -74,7 +79,7 @@ class EthercatClient():
                 c = data_string[i:i+1]
                 if c == b'\0':
                     root = ET.fromstring(string_segment)
-                    #ET.dump(message)
+                    ET.dump(root)
                     #root = message.find('xml')
                     for node in root:
                         source = node.tag
@@ -92,7 +97,9 @@ class EthercatClient():
         print('send to ehtercat')
         ET.dump(node)
         message = ET.Element('xml')
+        
         message.append(node)
+        
         message = ET.tostring(message)
         self.socket.send(message)
         pass
@@ -102,6 +109,15 @@ class EthercatClient():
 
     def addDataHandler(self, node_name, callback):
         self.callback_map[node_name] = callback
+
+    def generateControl(self, control_name):
+        self.control_idx += 1
+        control_element = ET.Element('control', attrib={'value':control_name})
+
+        idx_node = ET.SubElement(control_element, 'idx')
+        idx_node.attrib['value'] = str(self.control_idx)
+
+        return control_element
 
 def simulatedCallback(data_packet):
     print("callback")
