@@ -1,27 +1,26 @@
-from DictionaryDataStreamer import DictionaryDataStreamer
-from EthercatClient import EthercatClient
 import time
+import EthercatSlaveHandler
 
-class EthercatClientDataStreamer(DictionaryDataStreamer):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.ethercat_client = kwargs['ethercat_client']
+class EthercatClientDataStreamer():
+    def __init__(self, slave_handler, streamer):
+        self.slave_handler = slave_handler
+        self.streamer = streamer
         self.stopped = False
         self.requested_data = []
-
+        self.slave_handler.addMessageHandler(self.ethercatClientMessageHandler)
+        self.streamer.addCommandHandler(self.dataStreamerCommandHandler)
+        self.streamer.addReceiveMessageHandler(self.streamerMessageHandler)
+        
     def run(self):
-        super().connect()
-        self.addCommandHandler(self.dataStreamerCommandHandler)
-        self.ethercat_client.addDataHandler(self.ethercatClientDataHandler)
-        self.ethercat_client.run()
+        self.streamer.connect()
 
-    def ethercatClientDataHandler(self, data):
-        #print('ethercatClientDataHandler: ' + str(data))
-        if type(data) is not dict:
-            raise ValueError
-        #print(data)
-        to_send_data = {k: data[k] for k in self.requested_data}
-        self.sendData(to_send_data)
+    def ethercatClientMessageHandler(self, data):
+        for packet in data:
+            self.streamer.sendMessage(packet)
+
+    def streamerMessageHandler(self, data):
+        self.slave_handler.sendMessage(data)
+            
 
     def _commandHandler(self, command):
         if command == 'stop':
@@ -33,9 +32,9 @@ class EthercatClientDataStreamer(DictionaryDataStreamer):
                 if data_to_add not in self.requested_data:
                     self.requested_data.append(data_to_add)
         elif 'motor_decelerate' in command:
-            self.ethercat_client.sendToEthercat(node_name='motor', command='decelerate')
+            self.slave_handler.sendControl(node_name='motor', command='decelerate')
         elif 'motor_accelerate' in command:
-            self.ethercat_client.sendToEthercat(node_name='motor', command='accelerate')
+            self.slave_handler.sendControl(node_name='motor', command='accelerate')
             
 
 
@@ -53,7 +52,5 @@ class EthercatClientDataStreamer(DictionaryDataStreamer):
         pass
 
     def stop(self):
-        self.ethercat_client.disconnect()
-        super().stop()
         self.stopped = True
 

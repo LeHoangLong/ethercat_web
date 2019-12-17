@@ -22,7 +22,7 @@ class DataStreamer:
 
     def sendCommand(self, command):
         command_dict = {'command': command}
-        self.sendData(command_dict)
+        self.sendMessage(command_dict)
 
     def iqCommandHandler(self, iq):
         print(iq['body'])
@@ -58,21 +58,13 @@ class DataStreamer:
         self.connected = True
 
     def handleIncomingMessage(self, message):
-        print(message['body'])
-        message_list = str(message['body']).split(';')
-        for message_unit in message_list:
-            if 'command' in str(message_unit):
-                for handler in self.receive_command_handler_list:
-                    handler(message_unit)
-            else:
-                for handler in self.receive_message_handler_list:
-                    handler(message_unit)
-            pass
+        for handler in self.receive_message_handler_list:
+            handler(message['body'])
 
-    def sendData(self, data):
+    def sendMessage(self, data):
         for peer in self.peer_list:
             self.client_xmpp.send_message(mto=peer, mbody=data)
-        pass
+            pass
 
     def handleAvailable(self, presence):
         from_str = str(presence['from'])

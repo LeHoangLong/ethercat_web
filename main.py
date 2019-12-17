@@ -1,12 +1,14 @@
 from DictionaryDataStreamer import DictionaryDataStreamer
-from EthercatClientDataStreamer import EthercatClientDataStreamer
 from EthercatClient import EthercatClient
 import threading
 from SimulatedEthercatMasterServer import SimulatedEthercatMasterServer
 import time
 from multiprocessing import Process
+from ListOfNodeHandler import ListOfNodehandler
 
 def receiveMessageHandler(message):
+    print('main handler')
+    print(message)
     print('from: ' + str(message['from']))
     print('to: ' + str(message['to']))
     print('received message 2: ' + str(message['body']))
@@ -21,13 +23,18 @@ def create_streamer_1():
     peer_name = 'long_2@35.244.75.175'
     my_password = '123'
     client = EthercatClient(server_name='localhost', server_port=1025)
-    streamer = EthercatClientDataStreamer(name=my_name, domain='35.244.75.175',\
-         password=my_password, ethercat_client=client)
-    streamer.run()
-    #streamer.addPeer(peer_name)
-    print('streamer 1 run')
-    streamer.waitTillStopped()
-    print('streamer 1 done')
+    client.run()
+    streamer = DictionaryDataStreamer(name='long', domain='hoanglong-desktop',\
+         password='123')
+
+    peer_name = 'long_2@hoanglong-desktop'
+
+    list_of_node_handler = ListOfNodehandler(client, streamer)
+    
+    streamer.connect()
+    streamer.addPeer(peer_name)
+    while True:
+        pass
 
 def create_streamer_2():
     my_name = 'le.hoang.long.2@xmpp.jp'
@@ -40,23 +47,23 @@ def create_streamer_2():
     my_password = '123'
 
     #streamer_2 = DictionaryDataStreamer(jid=my_name, password=my_password)
-    streamer_2 = DictionaryDataStreamer(name=my_name, domain='35.244.75.175',\
-         password=my_password)
+    streamer_2 = DictionaryDataStreamer(name='long_2', domain='hoanglong-desktop',\
+         password='123')
     streamer_2.addReceiveMessageHandler(receiveMessageHandler)
     streamer_2.connect()
+    peer_name = 'long@hoanglong-desktop'
     streamer_2.addPeer(peer_name)
     time.sleep(5)
     print('streamer 2 run')
-    streamer_2.sendCommand('add_watch_sensor1')
     time.sleep(100)
     streamer_2.stop()
     
 if __name__ == "__main__":
     p = threading.Thread(target=create_streamer_1)
-    #p_2 = threading.Thread(target=create_streamer_2)
+    p_2 = threading.Thread(target=create_streamer_2)
     p.start()
-    #p_2.start()
+    p_2.start()
     p.join()
-    #p_2.join()
+    p_2.join()
     print('done')
     pass

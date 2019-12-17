@@ -1,27 +1,20 @@
 from DataStreamer import DataStreamer
+import json
 
 class DictionaryDataStreamer(DataStreamer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        super().addReceiveMessageHandler(self.receiveDataHandler)
-        self.handler_list = []
+        super().addReceiveMessageHandler(self.receiveMessageHandler)
+        self.message_handler_list = []
 
-    def sendData(self, data):
-        data_string = ''
-        for key, val in data.items():
-            data_string += key + ':' + val + ';'
-        print(data_string)
-        super().sendData(data_string)
+    def sendMessage(self, data):
+        data_string = json.dumps(data)
+        super().sendMessage(data_string)
 
-    def addReceiveMessageHandler(self, handler):
-        self.handler_list.append(handler)
+    def addReceiveMessageHandler(self, message_handler):
+        self.message_handler_list.append(message_handler)
 
-    def receiveDataHandler(self, message):
-        data_dict = {}
-        message_list = message.split(';')
-        for data in message_list:
-            data_list = data.split(':')
-            data_dict[data_list[0]] = data_list[1]
-        print(data_dict)
-        for handler in self.handler_list:
+    def receiveMessageHandler(self, message):
+        data_dict = json.loads(message)
+        for handler in self.message_handler_list:
             handler(data_dict)

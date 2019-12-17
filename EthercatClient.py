@@ -28,7 +28,6 @@ class EthercatClient():
         password_node = ET.SubElement(control_node, 'password')
         password_node.attrib["value"] = 'test_password'
         
-        ET.dump(connect_request)
         self.socket.sendall(ET.tostring(connect_request) + b'\x00')
         replies = b""
         while b'\x00' not in replies:
@@ -79,7 +78,7 @@ class EthercatClient():
                 c = data_string[i:i+1]
                 if c == b'\0':
                     root = ET.fromstring(string_segment)
-                    ET.dump(root)
+                    #ET.dump(root)
                     #root = message.find('xml')
                     for node in root:
                         source = node.tag
@@ -94,8 +93,6 @@ class EthercatClient():
         pass
 
     def sendToEthercat(self, node):
-        print('send to ehtercat')
-        ET.dump(node)
         message = ET.Element('xml')
         
         message.append(node)
