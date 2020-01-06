@@ -5,6 +5,7 @@ from sleekxmpp.xmlstream.handler.callback import Callback as Callback
 from sleekxmpp.xmlstream.matcher.stanzapath import StanzaPath as StanzaPath
 import xml.etree.ElementTree as ET
 from sleekxmpp.exceptions import *
+
 class DataStreamer:
     def __init__(self, *args, **kwargs):
         self.name = kwargs['name']
@@ -26,9 +27,10 @@ class DataStreamer:
 
     def iqCommandHandler(self, iq):
         print(iq['body'])
-        pass
+        for handler in self.receive_command_handler_list:
+            handler(iq)
 
-    def connect(self):
+    def connect(self, block=True):
         if self.client_xmpp == None:
             self.client_xmpp = ClientXMPP(self.jid, self.password)
             self.client_xmpp.add_event_handler('session_start', self.handleConnected)
@@ -37,14 +39,34 @@ class DataStreamer:
             self.client_xmpp.add_event_handler('presence_subscribed', self.handleSubscribed)
             self.client_xmpp.add_event_handler('presence_available', self.handleAvailable)
             self.client_xmpp.add_event_handler('presence_unavailable', self.handleUnavailable)
+            self.client_xmpp.add_event_handler('presence_probe', self.handle_probe)
             self.client_xmpp.connect()
-            self.client_xmpp.process(block=False)
+            self.client_xmpp.process()
+            while self.connected == False:
+                pass
 
+
+    def handle_probe(self, presence):
+        sender = presence['from']
+        self.send_presence(pto=sender)
+
+    def probe_presence(self):
+        for peer in self.peer_list:
+            self.client_xmpp.send_presence(pto=peer['jid'], ptype='probe')
+            
     def handleConnected(self, event):
-        print('handling connected')
         self.client_xmpp.send_presence()
-        #self.client_xmpp.presences_received.wait(5)
-        self.client_xmpp.get_roster()
+        while len(self.client_xmpp.client_roster) == 0:
+            self.client_xmpp.get_roster()
+
+        for roster in self.client_xmpp.client_roster:
+            contact = {
+                'jid': roster,
+                'status': 'UNAVAILABLE'
+            }
+            self.peer_list.append(contact)
+
+        self.probe_presence()
 
         #groups = self.client_xmpp.groups()
         #for group in groups:
@@ -63,17 +85,23 @@ class DataStreamer:
 
     def sendMessage(self, data):
         for peer in self.peer_list:
-            self.client_xmpp.send_message(mto=peer, mbody=data)
+            if peer['status'] == 'AVAILABLE':
+                self.client_xmpp.send_message(mto=peer['jid'], mbody=data)
             pass
-
+        
+    def getListOfPeers(self):
+        return self.peer_list
+        
     def handleAvailable(self, presence):
-        from_str = str(presence['from'])
-        from_str_list = from_str.split('@')
-        if self.name != from_str_list[0]:
-            self.peer_list.append(presence['from'])
+        for peer in self.peer_list:
+            if peer['jid'] == presence['from'].bare:
+                print('peer available: ' + peer['jid'])
+                peer['status'] = 'AVAILABLE'
 
     def handleUnavailable(self, presence):
-        self.peer_list.remove(presence['from'])
+        for peer in self.peer_list:
+            if peer['jid'] == presence['from'].bare:
+                peer['status'] = 'UNAVAILABLE'
 
     def addPeer(self, peer):
         while not self.connected:
@@ -83,9 +111,21 @@ class DataStreamer:
     def handleSubscribe(self, presence):
         self.client_xmpp.update_roster(presence['from'])
         self.client_xmpp.send_presence_subscription(pto=presence['from'], ptype='subscribed')
+        contact = {
+            'jid': presence['from'].bare,
+            'status': 'UNAVAILABLE'
+        }
+        self.peer_list.append(contact)
+        self.probe_presence()
 
     def handleSubscribed(self, presence):
         self.client_xmpp.update_roster(presence['from'])
+        contact = {
+            'jid': roster,
+            'status': 'UNAVAILABLE'
+        }
+        self.peer_list.append(contact)
+        self.probe_presence()
 
     def addReceiveMessageHandler(self, handler):
         self.receive_message_handler_list.append(handler)

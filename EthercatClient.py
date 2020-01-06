@@ -3,8 +3,6 @@ import xml.etree.ElementTree as ET
 import sys
 import threading
 import time
-import sleekxmpp
-from sleekxmpp import ClientXMPP
 import msgpack
 
 class EthercatClient():

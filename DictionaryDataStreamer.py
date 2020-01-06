@@ -7,8 +7,8 @@ class DictionaryDataStreamer(DataStreamer):
         super().addReceiveMessageHandler(self.receiveMessageHandler)
         self.message_handler_list = []
 
-    def sendMessage(self, data):
-        data_string = json.dumps(data)
+    def sendMessage(self, data_dict):
+        data_string = json.dumps(data_dict)
         super().sendMessage(data_string)
 
     def addReceiveMessageHandler(self, message_handler):

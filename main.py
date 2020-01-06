@@ -47,13 +47,19 @@ def create_streamer_2():
     my_password = '123'
 
     #streamer_2 = DictionaryDataStreamer(jid=my_name, password=my_password)
+    #streamer_2 = DictionaryDataStreamer(name='le.hoang.long.2', domain='xmpp.jp',\
+    #     password='xmpp.jp')
     streamer_2 = DictionaryDataStreamer(name='long_2', domain='hoanglong-desktop',\
          password='123')
     streamer_2.addReceiveMessageHandler(receiveMessageHandler)
     streamer_2.connect()
     peer_name = 'long@hoanglong-desktop'
+    #peer_name = 'long@xmpp'
     streamer_2.addPeer(peer_name)
-    time.sleep(5)
+    while True:
+        test_request = [{'list_of_nodes': [{'control': 'get'}]}, {'test_node_2' : [{'control': 'type'}]}]
+        streamer_2.sendMessage(test_request)
+        time.sleep(1)
     print('streamer 2 run')
     time.sleep(100)
     streamer_2.stop()
