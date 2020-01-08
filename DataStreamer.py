@@ -18,8 +18,12 @@ class DataStreamer:
         self.online_peer = []
         self.receive_message_handler_list = []
         self.receive_command_handler_list = []
+        self.presence_update_handler_list = []
         self.connected = False
         self.is_first_connect = True
+
+    def addPresenceUpdateHandler(self, handler):
+        self.presence_update_handler_list.append(handler)
 
     def sendCommand(self, command):
         command_dict = {'command': command}
@@ -97,11 +101,18 @@ class DataStreamer:
             if peer['jid'] == presence['from'].bare:
                 print('peer available: ' + peer['jid'])
                 peer['status'] = 'AVAILABLE'
+        
+        for handler in self.presence_update_handler_list:
+            handler(peer)
 
     def handleUnavailable(self, presence):
         for peer in self.peer_list:
             if peer['jid'] == presence['from'].bare:
                 peer['status'] = 'UNAVAILABLE'
+
+        for handler in self.presence_update_handler_list:
+            handler(peer)
+
 
     def addPeer(self, peer):
         while not self.connected:

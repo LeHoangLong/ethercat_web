@@ -13,27 +13,24 @@ class ListOfNodehandler:
 
         control_node = ethercat_client.generateControl('get')
 
+        self.slave_node_list = []
+        self.slave_name_list = []
+
         root_node.append(control_node)
         ethercat_client.sendToEthercat(root_node)
         self.ethercat_client = ethercat_client
         self.streamer = streamer
         self.streamer.addReceiveMessageHandler(self.streamer_rx_message_handler)
-        self.slave_node_list = []
+        self.streamer.addReceiveControlHandler(self.node_name, self.streamerRxControlHandler)
 
-    def streamer_rx_message_handler(self, message_dict):
-        for node_msg_key in message_dict:
-            if node_msg_key == 'list_of_nodes':
-                json_dict = {}
-                node_message_list = message_dict[node_msg_key]
-                for message in node_message_list:
-                    if message.key()[0] == 'control':
-                        control_list = message_dict[message_key]
-                        for control in control_list:
-                            if (type(control) == str):
-                                if control == 'get':
-                                    json_dict = {self.node_name: self.slave_node_list}
-                        
-                self.streamer.sendMessage(json_dict)    
+    def streamerRxControlHandler(self, message, reply):
+        value = message['value']
+        if value == 'get':
+            reply['value'] = {'nodes': self.slave_name_list}
+        
+
+    def streamer_rx_message_handler(self, message_list):
+        pass
 
 
     def receive_handler(self, node):
@@ -46,6 +43,7 @@ class ListOfNodehandler:
                             if node.tag != 'idx' and node.tag != 'status':
                                 slave = SlaveHandler.SlaveHandler(self.ethercat_client, node.tag, self.streamer)
                                 self.slave_node_list.append(slave)
+                                self.slave_name_list.append(node.tag)
         pass
         #ethercat_slave = EthercatSlaveHandler.EthercatSlaveHandler(self.ethercat_client, 'test_node')
         #ethercat_streamer = EthercatClientDataStreamer.EthercatClientDataStreamer(ethercat_slave, self.streamer)

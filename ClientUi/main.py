@@ -64,6 +64,7 @@ class MachineActionPage(QtWidgets.QDialog):
     def __init__(self, backend, parent=None):
         super().__init__(parent)
         self.backend = backend
+        self.backend.all_node_received_signal.connect(self.list_of_node_received_slot)
 
         self.connect_tab = QtWidgets.QListWidgetItem("Connect")
         self.control_tab = QtWidgets.QListWidgetItem("Control")
@@ -76,7 +77,10 @@ class MachineActionPage(QtWidgets.QDialog):
         self.tab_list.addItem(self.collect_tab)
         self.tab_list.addItem(self.analyze_tab)
 
+        self.node_tree_header = QtWidgets.QTreeWidgetItem(['List of nodes'])
+        
         self.node_tree = QtWidgets.QTreeWidget()
+        self.node_tree.setHeaderItem(self.node_tree_header)
 
         self.panel_widget_layout = QtWidgets.QVBoxLayout()
         self.panel_widget_layout.setAlignment(QtCore.Qt.AlignTop)
@@ -109,6 +113,11 @@ class MachineActionPage(QtWidgets.QDialog):
         self.main_layout.addWidget(self.main_workspace, stretch=10)
 
         self.setLayout(self.main_layout)
+
+    def list_of_node_received_slot(self, list_of_node):
+        for node in list_of_node:
+            node_tree_item = QtWidgets.QTreeWidgetItem(self.node_tree, [node])
+            self.node_tree.addTopLevelItem(node_tree_item)
 
 class AddressableButton(QtWidgets.QPushButton):
     def __init__(self, name, address, QIcon=None, str='', parent=None):
@@ -160,6 +169,19 @@ class MachineListPage(QtWidgets.QDialog):
                 'status': status
             })
             self.updateList()
+
+    def updateMachineStatus(self, machine_name, machine_address, status):
+        found = False
+        found_machine = None
+        for machine in self.machine_list:
+            if machine['name'] == machine_name and machine['address'] == machine_address:
+                found_machine = machine
+                found = True
+                break
+        if found == True:
+            found_machine['status'] = status
+            self.updateList()
+
     
     def updateList(self):
         for i in reversed(range(self.machine_list_layout.count())):
@@ -220,6 +242,15 @@ class App(QtWidgets.QDialog):
         self.machine_page.open_page_signal.connect(self.open_tab_slot)
         self.opened_tab_name_list = []
 
+        self.backend.presence_updated_signal.connect(self.presenceUpdateHandler)
+
+    def presenceUpdateHandler(self):
+        list_of_workstation = self.backend.getWorkstationList()
+
+        for i, workstation in enumerate(list_of_workstation):
+            self.machine_page.updateMachineStatus("machine_" + str(i), workstation['jid'], workstation['status'])
+        
+        pass
 
     def open_tab_slot(self, name, address):
         if name not in self.opened_tab_name_list:

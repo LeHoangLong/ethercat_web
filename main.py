@@ -14,6 +14,10 @@ def receiveMessageHandler(message):
     print('received message 2: ' + str(message['body']))
     print('received time2 : ' + str(time.time() * 1000))
 
+def reply_handler(reply):
+    print(reply)
+    pass
+
 def create_streamer_1():
     my_name = 'le.hoang.long@xmpp.jp'
     peer_name = 'le.hoang.long.2@xmpp'
@@ -32,7 +36,7 @@ def create_streamer_1():
     list_of_node_handler = ListOfNodehandler(client, streamer)
     
     streamer.connect()
-    streamer.addPeer(peer_name)
+    #streamer.addPeer(peer_name)
     while True:
         pass
 
@@ -51,14 +55,18 @@ def create_streamer_2():
     #     password='xmpp.jp')
     streamer_2 = DictionaryDataStreamer(name='long_2', domain='hoanglong-desktop',\
          password='123')
-    streamer_2.addReceiveMessageHandler(receiveMessageHandler)
+    #streamer_2.addReceiveMessageHandler(receiveMessageHandler)
     streamer_2.connect()
-    peer_name = 'long@hoanglong-desktop'
+    #peer_name = 'long@hoanglong-desktop'
     #peer_name = 'long@xmpp'
-    streamer_2.addPeer(peer_name)
+    #streamer_2.addPeer(peer_name)
     while True:
-        test_request = [{'list_of_nodes': [{'control': 'get'}]}, {'test_node_2' : [{'control': 'type'}]}]
-        streamer_2.sendMessage(test_request)
+        #test_request = [{'list_of_nodes': {'control': 'get'}}, {'test_node_2' : [{'control': 'type'}]}]
+        #test_request = [
+        #    {'node': 'list_of_nodes', 'type': 'control', 'value': 'get'}
+            #{'node': 'test_node_2', 'type': 'control', 'value': 'type'}
+        #]
+        streamer_2.sendControl('list_of_nodes', 'get', reply_handler=reply_handler)
         time.sleep(1)
     print('streamer 2 run')
     time.sleep(100)
@@ -66,10 +74,10 @@ def create_streamer_2():
     
 if __name__ == "__main__":
     p = threading.Thread(target=create_streamer_1)
-    p_2 = threading.Thread(target=create_streamer_2)
+    #p_2 = threading.Thread(target=create_streamer_2)
     p.start()
-    p_2.start()
+    #p_2.start()
     p.join()
-    p_2.join()
+    #p_2.join()
     print('done')
     pass

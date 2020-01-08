@@ -16,7 +16,7 @@ class SlaveHandler:
 
     def streamerReceiveHandler(self, received_dict):
         for node in received_dict:
-            if node.key() == self.node_name:
+            if node == self.node_name:
                 root_node = ET.Element(self.node_name)
                 message_list = node.value()
                 for message_key in message_list:
