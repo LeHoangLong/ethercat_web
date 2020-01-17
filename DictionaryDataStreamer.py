@@ -72,8 +72,9 @@ class DictionaryDataStreamer(DataStreamer):
                             'type': 'reply',
                             'value': ''
                         }
-                        self.control_handler_dict[message['node']](message, reply)
-                        self.sendReply(reply)
+                        immediate_reply = self.control_handler_dict[message['node']](message, reply)
+                        if immediate_reply != True:
+                            self.sendReply(reply)
                 elif message['type'] == 'message':
                     for handler in self.message_handler_list:
                         handler(message)

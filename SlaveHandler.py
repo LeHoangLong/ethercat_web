@@ -12,7 +12,20 @@ class SlaveHandler:
         self.__getType()
         self.type_found = False
         self.streamer = streamer
-        self.streamer.addReceiveMessageHandler(self.streamerReceiveHandler)
+        #self.streamer.addReceiveMessageHandler(self.streamerReceiveHandler)
+        self.streamer.addReceiveControlHandler(self.node_name, self.streamerRxControlHandler)
+        self.pending_control_from_streamer = {}
+        self.pending_control_from_ethercat = {}
+        
+    def streamerRxControlHandler(self, message, reply):
+        idx = message['idx']
+        self.pending_control_from_streamer[idx] = reply
+        root_node = ET.Element(self.node_name)
+        control_val = message['value']
+        control_node = ethercat_client.generateControl(control_val)
+        root_node.append(control_node)
+        self.client.sendToEthercat(root_node)
+
 
     def streamerReceiveHandler(self, received_dict):
         for node in received_dict:
@@ -46,10 +59,14 @@ class SlaveHandler:
             json_dict = {self.node_name: []}
             for child in node:
                 if child.tag == 'result':
-                    result_dict = {child.tag: self.eTreeToDict(child)}
+                    result_dict = {
+                        'type': child.tag,
+                        'value': self.eTreeToDict(child)
+                    }
                     json_dict[self.node_name].append(result_dict)
             self.streamer.sendMessage(json_dict)
             print(json.dumps(json_dict))
+
     def eTreeToDict(self, tree):
         ET.dump(tree)
         if 'value' in tree.attrib and tree.attrib['value'] == '[]':
@@ -68,6 +85,7 @@ class SlaveHandler:
                 if 'value' in tree.attrib:
                     final_dict['value'] = tree.attrib['value']
                 for child in tree:
-                    node_dict = self.eTreeToDict(child)
-                    final_dict[child.tag] = node_dict
+                    if child.tag != 'idx' and child.tag != 'value':
+                        node_dict = self.eTreeToDict(child)
+                        final_dict[child.tag] = node_dict
                 return final_dict

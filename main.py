@@ -66,7 +66,8 @@ def create_streamer_2():
         #    {'node': 'list_of_nodes', 'type': 'control', 'value': 'get'}
             #{'node': 'test_node_2', 'type': 'control', 'value': 'type'}
         #]
-        streamer_2.sendControl('list_of_nodes', 'get', reply_handler=reply_handler)
+        #streamer_2.sendControl('list_of_nodes', 'get', reply_handler=reply_handler)
+        streamer_2.sendControl('test_node_2', 'type', reply_handler=reply_handler)
         time.sleep(1)
     print('streamer 2 run')
     time.sleep(100)
@@ -74,10 +75,10 @@ def create_streamer_2():
     
 if __name__ == "__main__":
     p = threading.Thread(target=create_streamer_1)
-    #p_2 = threading.Thread(target=create_streamer_2)
+    p_2 = threading.Thread(target=create_streamer_2)
     p.start()
-    #p_2.start()
+    p_2.start()
     p.join()
-    #p_2.join()
+    p_2.join()
     print('done')
     pass

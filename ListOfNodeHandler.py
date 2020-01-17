@@ -27,6 +27,7 @@ class ListOfNodehandler:
         value = message['value']
         if value == 'get':
             reply['value'] = {'nodes': self.slave_name_list}
+        return True
         
 
     def streamer_rx_message_handler(self, message_list):
