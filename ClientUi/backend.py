@@ -12,7 +12,7 @@ class AppBackend(QtCore.QObject):
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.streamer = DictionaryDataStreamer(name='long_2', domain='hoanglong-desktop',\
+        self.streamer = DictionaryDataStreamer(name='long_2', domain='long-inspiron-5447',\
             password='123')
         self.streamer.connect(block=True)
         self.workstation_list = []
@@ -41,6 +41,8 @@ class WorkstationBackend(QtCore.QObject):
     connection_req = QtCore.pyqtSignal(ConnectionRequest)
     update_connection_status_signal = QtCore.pyqtSignal(ConnectionStatus)
     all_node_received_signal = QtCore.pyqtSignal(list)
+    node_type_received = QtCore.pyqtSignal(str, list)
+    available_collect_data_update = QtCore.pyqtSignal(list)
 
     def __init__(self, workstation_address, streamer, parent=None):
         super().__init__(parent)
@@ -68,11 +70,29 @@ class WorkstationBackend(QtCore.QObject):
 
     def getAllNodes(self):
         get_node_request = {'node': 'list_of_nodes', 'type': 'control', 'value': 'get'}
-        self.streamer.sendControl('list_of_nodes', 'get', reply_handler=self.receiveReplyHandler)
+        self.streamer.sendControl('list_of_nodes', 'get', reply_handler=self.listOfNodeReplyReceiveHandler)
 
-    def receiveReplyHandler(self, message):
-        self.node_list = message['value']['nodes']
+    def getAvailableCollectData(self, node_name):
+        available_data = []
+        if node_name == 'test_node':
+            available_data = ['data_1', 'data_2']
+        self.available_collect_data_update.emit(available_data)
+
+    def listOfNodeReplyReceiveHandler(self, reply):
+        self.node_list = reply['return']['nodes']
         self.all_node_received_signal.emit(self.node_list)
+
+    def sendControl(self, node_name, command, reply_handler=None):
+        if node_name in self.node_list:
+            self.streamer.sendControl(node_name, command, reply_handler=reply_handler)
+        
+    def getNodeType(self, node_name):
+        if node_name in self.node_list:
+            self.streamer.sendControl(node_name, 'type', reply_handler=self.typeReceiveHandler)
+
+    def typeReceiveHandler(self, reply):
+        type_list = reply['return']['types']
+        self.node_type_received.emit(reply['node'], type_list)
 
     def receiveMessageHandler(self, message_list):
         for message in message_list:

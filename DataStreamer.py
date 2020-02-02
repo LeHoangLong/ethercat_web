@@ -60,8 +60,7 @@ class DataStreamer:
             
     def handleConnected(self, event):
         self.client_xmpp.send_presence()
-        while len(self.client_xmpp.client_roster) == 0:
-            self.client_xmpp.get_roster()
+        self.client_xmpp.get_roster()
 
         for roster in self.client_xmpp.client_roster:
             contact = {
@@ -102,8 +101,8 @@ class DataStreamer:
                 print('peer available: ' + peer['jid'])
                 peer['status'] = 'AVAILABLE'
         
-        for handler in self.presence_update_handler_list:
-            handler(peer)
+                for handler in self.presence_update_handler_list:
+                    handler(peer)
 
     def handleUnavailable(self, presence):
         for peer in self.peer_list:

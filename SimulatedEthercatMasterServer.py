@@ -3,7 +3,6 @@ import xml.etree.ElementTree as ET
 import sys
 import threading
 import random
-import msgpack
 import time
 
 class SimulatedEthercatMasterServer():

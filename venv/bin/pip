@@ -1,4 +1,4 @@
-#!/home/hoanglong/git/ethercat_web_interface/venv/bin/python3
+#!/home/long/git/ethercat_web/venv/bin/python3
 
 # -*- coding: utf-8 -*-
 import re

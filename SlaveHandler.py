@@ -9,7 +9,6 @@ class SlaveHandler:
         self.client.addDataHandler(node_name, self.receive_handler)
         self.node_name = node_name
         self.type_list = []
-        self.__getType()
         self.type_found = False
         self.streamer = streamer
         #self.streamer.addReceiveMessageHandler(self.streamerReceiveHandler)
@@ -22,50 +21,39 @@ class SlaveHandler:
         self.pending_control_from_streamer[idx] = reply
         root_node = ET.Element(self.node_name)
         control_val = message['value']
-        control_node = ethercat_client.generateControl(control_val)
+        control_node = self.client.generateControl(control_val, idx)
         root_node.append(control_node)
-        self.client.sendToEthercat(root_node)
-
-
-    def streamerReceiveHandler(self, received_dict):
-        for node in received_dict:
-            if node == self.node_name:
-                root_node = ET.Element(self.node_name)
-                message_list = node.value()
-                for message_key in message_list:
-                    if message_key == 'control':
-                        control_list = message_list[message_key]
-                        for control in control_list:
-                            if (type(control) == str):
-                                control_node = self.client.generateControl(control)
-                            else:
-                                control_dict = control
-                                control_node = self.client.generateControl(control_dict['value'])
-                            root_node.append(control_node)
-                ET.dump(root_node)
-                self.client.sendToEthercat(root_node)
-
-    def getType(self):
-        return self.type_list
-
-    def __getType(self):
-        root_node = ET.Element(self.node_name)
-        control_node = self.client.generateControl('type')
-        root_node.append(control_node)
+        ET.dump(root_node)
         self.client.sendToEthercat(root_node)
 
     def receive_handler(self, node):
+        reply = None
+        ET.dump(node)
         if node.tag == self.node_name:
-            json_dict = {self.node_name: []}
             for child in node:
                 if child.tag == 'result':
-                    result_dict = {
-                        'type': child.tag,
-                        'value': self.eTreeToDict(child)
-                    }
-                    json_dict[self.node_name].append(result_dict)
-            self.streamer.sendMessage(json_dict)
-            print(json.dumps(json_dict))
+                    for grandchild in child.getchildren():
+                        if grandchild.tag == 'idx':
+                            idx = int(grandchild.attrib['value'])
+                            if idx in self.pending_control_from_streamer:
+                                reply = self.pending_control_from_streamer[idx]
+                                del self.pending_control_from_streamer[idx]
+                            else:
+                                pass
+                    for grandchild in child.getchildren():
+                        if grandchild.tag == 'return' and reply != None:
+                            reply['return'] = self.eTreeToDict(grandchild)
+                            string_to_send = json.dumps(reply) 
+                            print(string_to_send)
+                            self.streamer.sendReply(reply)
+                            pass
+                elif child.tag == 'message':
+                    value = child.attrib['value']
+                    time = child.find('time')
+                    if time != None:
+                        time = time.attrib['value']
+                    data = self.eTreeToDict(child.find('data'))
+                    self.streamer.sendMessage(self.node_name, value, time=time, data=data)
 
     def eTreeToDict(self, tree):
         ET.dump(tree)

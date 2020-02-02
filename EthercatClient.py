@@ -3,7 +3,6 @@ import xml.etree.ElementTree as ET
 import sys
 import threading
 import time
-import msgpack
 
 class EthercatClient():
     def __init__(self, *args, **kwargs):
@@ -105,8 +104,11 @@ class EthercatClient():
     def addDataHandler(self, node_name, callback):
         self.callback_map[node_name] = callback
 
-    def generateControl(self, control_name):
-        self.control_idx += 1
+    def generateControl(self, control_name, idx=None):
+        if idx != None:
+            self.control_idx = idx
+        else:
+            self.control_idx += 1
         control_element = ET.Element('control', attrib={'value':control_name})
 
         idx_node = ET.SubElement(control_element, 'idx')

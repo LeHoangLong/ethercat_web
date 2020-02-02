@@ -8,25 +8,24 @@ import SlaveHandler
 class ListOfNodehandler:
     def __init__(self, ethercat_client, streamer):
         self.node_name = 'list_of_nodes'
-        ethercat_client.addDataHandler(self.node_name, self.receive_handler)
-        root_node = ET.Element(self.node_name)
-
-        control_node = ethercat_client.generateControl('get')
-
+        self.ethercat_client = ethercat_client
+        self.streamer = streamer
         self.slave_node_list = []
         self.slave_name_list = []
 
+        root_node = ET.Element(self.node_name)
+        control_node = ethercat_client.generateControl('get')
         root_node.append(control_node)
-        ethercat_client.sendToEthercat(root_node)
-        self.ethercat_client = ethercat_client
-        self.streamer = streamer
+        self.ethercat_client.sendToEthercat(root_node)
+
+        self.ethercat_client.addDataHandler(self.node_name, self.receive_handler)
         self.streamer.addReceiveMessageHandler(self.streamer_rx_message_handler)
         self.streamer.addReceiveControlHandler(self.node_name, self.streamerRxControlHandler)
 
     def streamerRxControlHandler(self, message, reply):
         value = message['value']
         if value == 'get':
-            reply['value'] = {'nodes': self.slave_name_list}
+            reply['return'] = {'nodes': self.slave_name_list}
         return True
         
 
@@ -41,10 +40,11 @@ class ListOfNodehandler:
                 if 'value' in child.attrib and child.attrib['value'] == 'get':
                     if child.find('status').attrib['value'] == 'ok':
                         for node in child:
-                            if node.tag != 'idx' and node.tag != 'status':
-                                slave = SlaveHandler.SlaveHandler(self.ethercat_client, node.tag, self.streamer)
-                                self.slave_node_list.append(slave)
-                                self.slave_name_list.append(node.tag)
+                            if node.tag == 'return':
+                                for node_name in node:
+                                    slave = SlaveHandler.SlaveHandler(self.ethercat_client, node_name.tag, self.streamer)
+                                    self.slave_node_list.append(slave)
+                                    self.slave_name_list.append(node_name.tag)
         pass
         #ethercat_slave = EthercatSlaveHandler.EthercatSlaveHandler(self.ethercat_client, 'test_node')
         #ethercat_streamer = EthercatClientDataStreamer.EthercatClientDataStreamer(ethercat_slave, self.streamer)

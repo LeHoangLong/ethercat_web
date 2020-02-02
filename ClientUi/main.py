@@ -46,12 +46,98 @@ class MachineActionPage(QtWidgets.QDialog):
                 self.status.setText("Status: connected")
                 self.connect_button.setText("Disconnect")
 
-    class ControlPage(QtWidgets.QDialog):
+    class CollectPage(QtWidgets.QDialog):
+        class GenericCollectPage(QtWidgets.QDialog):
+            def __init__(self, node_name, backend, parent=None):
+                super().__init__(parent)
+                #self.setStyleSheet('background-color: green')
+                self.backend = backend
+                self.node_name = node_name
+                
+                self.collect_data_label = QtWidgets.QLabel("Available collect data")
+                
+                self.collect_data_list = QtWidgets.QListWidget()
+                self.collect_data_list.itemChanged.connect(self.collectDataListChangeHandler)
+
+                self.collect_data_layout = QtWidgets.QVBoxLayout()
+                self.collect_data_layout.addWidget(self.collect_data_label)
+                self.collect_data_layout.addWidget(self.collect_data_list)
+
+                self.main_layout = QtWidgets.QHBoxLayout()
+                self.main_layout.setContentsMargins(QtCore.QMargins(0, 0, 0, 0))
+                self.main_layout.addLayout(self.collect_data_layout)
+
+                self.setLayout(self.main_layout)
+                
+                self.backend.available_collect_data_update.connect(self.availableCollectDataUpdateHandler)
+                self.backend.getAvailableCollectData(node_name)
+
+                self.list_items = []
+
+            def availableCollectDataUpdateHandler(self, data_list):
+                self.collect_data_list.clear()
+                self.list_items = []
+                
+                for data in data_list:
+                    data_widget = QtWidgets.QListWidgetItem(data)
+                    data_widget.setFlags(data_widget.flags() | QtCore.Qt.ItemIsUserCheckable)
+                    data_widget.setCheckState(QtCore.Qt.Unchecked)
+                    self.collect_data_list.addItem(data_widget)
+
+            def collectDataListChangeHandler(self, item):
+                print(item.text())
+
+        class EthercatCollectPage(QtWidgets.QDialog):
+            def __init__(self, parent=None):
+                super().__init__(parent)
+                self.main_layout = QtWidgets.QVBoxLayout()
+                self.setStyleSheet('background-color: blue')
+
         def __init__(self, backend, parent=None):
             super().__init__(parent)
-            self.setStyleSheet('background-color: grey;')
+            self.parent = parent
+            self.main_widget = QtWidgets.QDialog(self)
+            self.backend = backend
+            self.main_layout = QtWidgets.QVBoxLayout(self)
+            self.setLayout(self.main_layout)
+            self.view_as_label = QtWidgets.QLabel("View as")
+            self.view_as_combo_box = QtWidgets.QComboBox()
+            self.view_as_layout = QtWidgets.QHBoxLayout()
+            self.view_as_layout.addWidget(self.view_as_label, stretch=1)
+            self.view_as_layout.addWidget(self.view_as_combo_box, stretch=15)
+            self.view_as_widget = QtWidgets.QWidget(self)
+            self.view_as_widget.setLayout(self.view_as_layout)
+            self.main_layout.addWidget(self.view_as_widget, alignment=QtCore.Qt.AlignTop, stretch=1)
+            self.current_item = None
+            self.view_as_combo_box.currentTextChanged.connect(self.typeViewSelectHandler)
+            
+        def itemSelectHandler(self, item, column):
+            if item.text(column) != self.current_item:
+                type_list = self.parent.type_dict[item.text(0)]
+                
+                self.view_as_combo_box.clear()
+                self.current_node_name = item.text(0)
+                
+                first_type = type_list[0]
+                self.typeViewSelectHandler(first_type)
 
-    class CollectPage(QtWidgets.QDialog):
+                for type_element in type_list:
+                    self.view_as_combo_box.addItem(type_element)
+
+
+        
+        def typeViewSelectHandler(self, current_type):
+            self.main_layout.removeWidget(self.main_widget)
+            self.main_widget.setParent(None)
+            del self.main_widget
+            if current_type == 'GENERIC':
+                self.main_widget = self.GenericCollectPage(self.current_node_name, self.backend)
+            else:
+                self.main_widget = self.EthercatCollectPage()
+            self.main_layout.addWidget(self.main_widget, stretch=20)
+
+
+    class ControlPage(QtWidgets.QDialog):
         def __init__(self, backend, parent=None):
             super().__init__(parent)
             self.setStyleSheet('background-color: grey;')
@@ -65,6 +151,12 @@ class MachineActionPage(QtWidgets.QDialog):
         super().__init__(parent)
         self.backend = backend
         self.backend.all_node_received_signal.connect(self.list_of_node_received_slot)
+        self.backend.node_type_received.connect(self.nodeTypeReceiveHandler)
+
+        self.connect_page = self.ConnectPage(self.backend, self)
+        self.control_page = self.ControlPage(self.backend, self)
+        self.collect_page = self.CollectPage(self.backend, self)
+        self.analyze_page = self.AnalyzePage(self.backend, self)
 
         self.connect_tab = QtWidgets.QListWidgetItem("Connect")
         self.control_tab = QtWidgets.QListWidgetItem("Control")
@@ -81,6 +173,7 @@ class MachineActionPage(QtWidgets.QDialog):
         
         self.node_tree = QtWidgets.QTreeWidget()
         self.node_tree.setHeaderItem(self.node_tree_header)
+        self.node_tree.itemActivated.connect(self.collect_page.itemSelectHandler)
 
         self.panel_widget_layout = QtWidgets.QVBoxLayout()
         self.panel_widget_layout.setAlignment(QtCore.Qt.AlignTop)
@@ -90,11 +183,6 @@ class MachineActionPage(QtWidgets.QDialog):
         
         self.panel_widget = QtWidgets.QDialog()
         self.panel_widget.setLayout(self.panel_widget_layout)
-
-        self.connect_page = self.ConnectPage(self.backend)
-        self.control_page = self.ControlPage(self.backend)
-        self.collect_page = self.CollectPage(self.backend)
-        self.analyze_page = self.AnalyzePage(self.backend)
 
         self.main_workspace_stack = QtWidgets.QStackedLayout()
         self.main_workspace_stack.addWidget(self.connect_page)
@@ -113,11 +201,20 @@ class MachineActionPage(QtWidgets.QDialog):
         self.main_layout.addWidget(self.main_workspace, stretch=10)
 
         self.setLayout(self.main_layout)
+        self.type_dict = {}
 
     def list_of_node_received_slot(self, list_of_node):
         for node in list_of_node:
             node_tree_item = QtWidgets.QTreeWidgetItem(self.node_tree, [node])
             self.node_tree.addTopLevelItem(node_tree_item)
+            self.type_dict[node] = []
+        
+        for node in self.type_dict:
+            self.backend.getNodeType(node)
+    
+    def nodeTypeReceiveHandler(self, node_name, node_type):
+        if node_name in self.type_dict:
+            self.type_dict[node_name] = node_type
 
 class AddressableButton(QtWidgets.QPushButton):
     def __init__(self, name, address, QIcon=None, str='', parent=None):
