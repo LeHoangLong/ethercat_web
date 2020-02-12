@@ -1,6 +1,7 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from backend import AppBackend, WorkstationBackend
 from enum import Enum
+import json
 
 class MachineActionPage(QtWidgets.QDialog):
     class ConnectPage(QtWidgets.QDialog):
@@ -46,46 +47,423 @@ class MachineActionPage(QtWidgets.QDialog):
                 self.status.setText("Status: connected")
                 self.connect_button.setText("Disconnect")
 
-    class CollectPage(QtWidgets.QDialog):
-        class GenericCollectPage(QtWidgets.QDialog):
+    class CollectPage(QtWidgets.QWidget):
+        class GenericCollectPage(QtWidgets.QWidget):
             def __init__(self, node_name, backend, parent=None):
                 super().__init__(parent)
+                self.parent = parent
                 #self.setStyleSheet('background-color: green')
                 self.backend = backend
                 self.node_name = node_name
+
+                #start trigger set up widget
+                self.start_trigger_add_button = QtWidgets.QPushButton("Add start trigger")
+                self.start_trigger_add_button.clicked.connect(self.addStartTriggerButtonClickedHandler)
+                self.start_trigger_remove_button = QtWidgets.QPushButton("Remove start trigger")
+
+                self.start_trigger_add_remove_button_layout = QtWidgets.QHBoxLayout()
+                self.start_trigger_add_remove_button_layout.addWidget(self.start_trigger_add_button)
+                self.start_trigger_add_remove_button_layout.addWidget(self.start_trigger_remove_button)
+
+                self.start_trigger_condition_list = QtWidgets.QListWidget()
+
+                self.start_trigger_label = QtWidgets.QLabel("Start trigger")
+
+
+                self.start_trigger_layout = QtWidgets.QVBoxLayout()
+                self.start_trigger_layout.addWidget(self.start_trigger_label)
+                self.start_trigger_layout.addWidget(self.start_trigger_condition_list)
+                self.start_trigger_layout.addLayout(self.start_trigger_add_remove_button_layout)
                 
+                self.start_trigger_widget = QtWidgets.QWidget()
+                self.start_trigger_widget.setLayout(self.start_trigger_layout)
+                ################################################################################
+                
+                #end trigger set up widget
+                self.end_trigger_add_button = QtWidgets.QPushButton("Add start trigger")
+                self.end_trigger_remove_button = QtWidgets.QPushButton("Remove start trigger")
+
+                self.end_trigger_add_remove_button_layout = QtWidgets.QHBoxLayout()
+                self.end_trigger_add_remove_button_layout.addWidget(self.end_trigger_add_button)
+                self.end_trigger_add_remove_button_layout.addWidget(self.end_trigger_remove_button)
+
+                self.end_trigger_condition_list = QtWidgets.QListWidget()
+
+                self.end_trigger_label = QtWidgets.QLabel("End trigger")
+
+                self.end_trigger_layout = QtWidgets.QVBoxLayout()
+                self.end_trigger_layout.addWidget(self.end_trigger_label)
+                self.end_trigger_layout.addWidget(self.end_trigger_condition_list)
+                self.end_trigger_layout.addLayout(self.end_trigger_add_remove_button_layout)
+                
+                self.end_trigger_widget = QtWidgets.QWidget()
+                self.end_trigger_widget.setLayout(self.end_trigger_layout)
+                ################################################################################
+
+
+                #trigger set up widget
+                self.trigger_setup_layout = QtWidgets.QVBoxLayout()
+                self.trigger_setup_layout.addWidget(self.start_trigger_widget)
+                self.trigger_setup_layout.addWidget(self.end_trigger_widget)
+
+                self.trigger_setup_widget = QtWidgets.QWidget()
+                self.trigger_setup_widget.setLayout(self.trigger_setup_layout)
+                ################################################################################
+
+                #save folder widget
+                try:
+                    metadata_file = open("meta.txt", "r")
+                    json_data_str =  metadata_file.read()
+                    json_data = json.loads(json_data_str)
+                    if self.parent.parent.name in json_data:
+                        self.save_location_path = json_data[self.parent.parent.name]['save_location']
+                    else:
+                        self.save_location_path = ""
+                except Exception:
+                    self.save_location_path = ""
+
+                self.save_location_button = QtWidgets.QPushButton("Choose folder")
+                self.save_location_button.clicked.connect(self.chooseTargetFolderButtonClickHandler)
+                self.save_location_button.setStyleSheet('background-color: red')
+                self.current_location_text = QtWidgets.QLabel(self.save_location_path)
+                self.current_location_text.setStyleSheet('border-width: 1px; border-style: solid; border-color: black;')
+                self.current_location_text.setContentsMargins(QtCore.QMargins(0, 0, 0, 0))
+                
+                self.select_location_layout = QtWidgets.QHBoxLayout()
+                self.select_location_layout.addWidget(self.current_location_text, stretch=8)
+                self.select_location_layout.addWidget(self.save_location_button, stretch=1)
+                self.select_location_layout.setContentsMargins(QtCore.QMargins(0, 0, 0, 0))
+                
+                self.select_location_widget = QtWidgets.QWidget()
+                self.select_location_widget.setLayout(self.select_location_layout)
+                self.select_location_widget.setContentsMargins(QtCore.QMargins(0, 0, 0, 0))
+                ################################################################################
+
                 self.collect_data_label = QtWidgets.QLabel("Available collect data")
                 
                 self.collect_data_list = QtWidgets.QListWidget()
-                self.collect_data_list.itemChanged.connect(self.collectDataListChangeHandler)
+                
+                self.add_collect_data_button = QtWidgets.QPushButton("Add")
+                self.add_collect_data_button.clicked.connect(self.addDataCollectorButtonClickedHandler)
+                self.remove_collect_data_button = QtWidgets.QPushButton("Remove")
+
+                self.add_and_remove_collect_data_layout = QtWidgets.QHBoxLayout()
+                self.add_and_remove_collect_data_layout.addWidget(self.add_collect_data_button)
+                self.add_and_remove_collect_data_layout.addWidget(self.remove_collect_data_button)
+                self.add_and_remove_collect_data_layout.setContentsMargins(QtCore.QMargins(0, 0, 0, 0))
+
+                self.add_and_remove_collect_data_widget = QtWidgets.QWidget()
+                self.add_and_remove_collect_data_widget.setLayout(self.add_and_remove_collect_data_layout)
+                self.add_and_remove_collect_data_widget.setContentsMargins(QtCore.QMargins(0, 0, 0, 0))
 
                 self.collect_data_layout = QtWidgets.QVBoxLayout()
                 self.collect_data_layout.addWidget(self.collect_data_label)
                 self.collect_data_layout.addWidget(self.collect_data_list)
+                self.collect_data_layout.addWidget(self.add_and_remove_collect_data_widget)
+                self.collect_data_layout.setContentsMargins(QtCore.QMargins(0, 0, 0, 0))
 
-                self.main_layout = QtWidgets.QHBoxLayout()
+                self.collect_data_widget = QtWidgets.QWidget()
+                self.collect_data_widget.setLayout(self.collect_data_layout)
+                self.collect_data_widget.setContentsMargins(QtCore.QMargins(0, 0, 0, 0))
+
+                self.collect_data_and_save_layout = QtWidgets.QVBoxLayout()
+                self.collect_data_and_save_layout.addWidget(self.collect_data_widget)
+                self.collect_data_and_save_layout.addWidget(self.select_location_widget)
+                self.collect_data_and_save_layout.setContentsMargins(QtCore.QMargins(0, 0, 0, 0))
+
+                self.collect_data_and_save_widget = QtWidgets.QWidget()
+                self.collect_data_and_save_widget.setLayout(self.collect_data_and_save_layout)
+                self.collect_data_and_save_widget.setContentsMargins(QtCore.QMargins(0, 0, 0, 0))
+
+                self.workspace_layout = QtWidgets.QHBoxLayout()
+                self.workspace_layout.setContentsMargins(QtCore.QMargins(0, 0, 0, 0))
+                self.workspace_layout.addWidget(self.collect_data_and_save_widget)
+                self.workspace_layout.addWidget(self.trigger_setup_widget)
+
+                self.workspace_widget = QtWidgets.QWidget()
+                self.workspace_widget.setLayout(self.workspace_layout)
+
+                self.apply_button = QtWidgets.QPushButton("Apply")
+                self.apply_button.clicked.connect(self.applyClickedHandler)
+
+                self.is_collecting = False
+                self.start_button = QtWidgets.QPushButton("Start")
+                self.start_button.clicked.connect(self.startClickedHandler)
+
+                self.main_layout = QtWidgets.QVBoxLayout()
                 self.main_layout.setContentsMargins(QtCore.QMargins(0, 0, 0, 0))
-                self.main_layout.addLayout(self.collect_data_layout)
+                self.main_layout.addWidget(self.workspace_widget)
+                self.main_layout.addWidget(self.apply_button)
+                self.main_layout.addWidget(self.start_button)
 
                 self.setLayout(self.main_layout)
                 
-                self.backend.available_collect_data_update.connect(self.availableCollectDataUpdateHandler)
-                self.backend.getAvailableCollectData(node_name)
+                self.pending_data = {}
 
-                self.list_items = []
-
-            def availableCollectDataUpdateHandler(self, data_list):
+            def availableCollectDataAddHandler(self, data_dict):
                 self.collect_data_list.clear()
-                self.list_items = []
-                
-                for data in data_list:
-                    data_widget = QtWidgets.QListWidgetItem(data)
-                    data_widget.setFlags(data_widget.flags() | QtCore.Qt.ItemIsUserCheckable)
-                    data_widget.setCheckState(QtCore.Qt.Unchecked)
-                    self.collect_data_list.addItem(data_widget)
+                for data in data_dict:
+                    full_name = self.node_name + '/' + data
+                    if full_name not in self.pending_data:
+                        data_widget = QtWidgets.QListWidgetItem(full_name)
+                        self.collect_data_list.addItem(data_widget)
+                        self.pending_data[full_name] = {
+                            'collect_type': data_dict[data]['collect_type'],
+                            'data_type': data_dict[data]['data_type']
+                        }
 
-            def collectDataListChangeHandler(self, item):
-                print(item.text())
+            def chooseTargetFolderButtonClickHandler(self):
+                path = QtWidgets.QFileDialog.getExistingDirectory(self, "Select output folder")
+                if path != '':
+                    self.save_location_path = path
+                self.current_location_text.setText(self.save_location_path)
+
+            def applyClickedHandler(self):
+                meta_data_file = open("meta.txt", "w")
+                json_data = {
+                    self.parent.parent.name: {
+                        "save_location": self.save_location_path,
+                        "data_collect_list": self.pending_data
+                    }
+                }
+                
+                meta_data_file.write(json.dumps(json_data))
+                meta_data_file.close()
+
+                for data_name, data_info in self.pending_data.items():
+                    self.backend.addDataCollector(data_name, data_info['collect_type'], data_info['data_type'])
+                self.pending_data = {}
+
+            def startClickedHandler(self):
+                self.is_collecting = not self.is_collecting
+
+                if self.is_collecting:
+                    self.backend.startDataCollection()
+                    self.start_button.setText("Stop")
+                else:
+                    self.backend.stopDataCollection()
+                    self.start_button.setText("Start")
+
+            class AddDataCollectorDialog(QtWidgets.QDialog):
+                add_data_signal = QtCore.pyqtSignal(dict)
+
+                def __init__(self, backend, parent=None):
+                    super().__init__(parent)
+                    self.setWindowTitle("Add data")
+                    self.backend = backend
+                    
+
+                    self.main_layout = QtWidgets.QVBoxLayout()
+
+                    self.setLayout(self.main_layout)
+
+                    self.tree_header = QtWidgets.QTreeWidgetItem(['Available data'])
+
+                    self.added_data_list = {}
+
+                    self.tree_item_list = []
+                    self.tree_widget = QtWidgets.QTreeWidget()
+                    self.tree_widget.setHeaderItem(self.tree_header)
+                    self.tree_widget.itemChanged.connect(self.treeChangedHandler)
+                    
+                    self.available_data_tree = self.backend.getAvailableCollectData()
+                    for node in self.available_data_tree:
+                        self.addNodetoTree(self.tree_widget, node)
+
+                    self.main_layout.addWidget(self.tree_widget)
+
+                    self.ok_button = QtWidgets.QPushButton("OK")
+                    self.ok_button.clicked.connect(self.okButtonHandler)
+                    self.main_layout.addWidget(self.ok_button)
+
+
+                def treeChangedHandler(self, item, column):
+                    path = item.text(0)
+                    parent = item.parent()
+                    while parent != self.tree_widget and parent != None:
+                        path = parent.text(0) + '/' + path
+                        parent = parent.parent()
+
+                    if item.checkState(0) == QtCore.Qt.Checked:
+                        self.added_data_list[path] = {
+                            'collect_type': 'DEFAULT',
+                            'data_type': 'int'
+                        }
+                    else:
+                        if path in self.added_data_list:
+                            del self.added_data_list[path]
+
+                def okButtonHandler(self):
+                    self.add_data_signal.emit(self.added_data_list)
+                    self.close()
+
+                def addNodetoTree(self, tree, node):
+                    child = QtWidgets.QTreeWidgetItem(tree)
+                    child.setText(0, node['name'])
+                    if node['type'] == 'list':
+                        node_list = node['data']
+                        for node in node_list:
+                            self.addNodetoTree(child, node)
+                    else:
+                        child.setFlags(child.flags() | QtCore.Qt.ItemIsUserCheckable)
+                        child.setCheckState(0, QtCore.Qt.Unchecked)
+
+                    self.tree_item_list.append(child)
+
+
+            def addDataCollectorButtonClickedHandler(self):
+                self.dialog = self.AddDataCollectorDialog(self.backend)
+                self.dialog.add_data_signal.connect(self.availableCollectDataAddHandler)
+                self.dialog.setModal(True)
+                self.dialog.show()
+
+            class AddDataTriggerDialog(QtWidgets.QDialog):
+                class TreeWidgetItemWrapper(QtWidgets.QTreeWidgetItem):
+                    def __init__(self, obj=None, callback=None, parent=None):
+                        super().__init__(parent)
+                        self.callback_obj = obj
+                        self.callback_func = callback
+                        pass
+
+                def __init__(self, backend, name, parent=None):
+                    super().__init__(parent)
+                    self.backend = backend
+                    self.parent = parent
+                    self.name = name
+                    self.setModal(True)
+                    self.main_layout = QtWidgets.QHBoxLayout()
+                    self.setLayout(self.main_layout)
+
+                    self.tree_header = QtWidgets.QTreeWidgetItem(['Available data'])
+
+                    self.condition_A = QtWidgets.QTreeWidget()
+                    self.condition_A.setHeaderItem(self.tree_header)
+                    self.condition_A.itemClicked.connect(self.conditionATreeChangedHandler)
+                    self.condition_A.itemDoubleClicked.connect(self.conditionATreeDoubleClickedHandler)
+
+                    self.condition_B = QtWidgets.QTreeWidget()
+                    self.condition_B.setHeaderItem(self.tree_header)
+                    self.condition_B.itemClicked.connect(self.conditionBTreeChangedHandler)
+                    self.condition_B.itemDoubleClicked.connect(self.conditionBTreeDoubleClickedHandler)
+
+                    self.condition_item_list = []
+
+                    self.comparison_box = QtWidgets.QComboBox()
+                    self.comparison_box.addItem(">")
+                    self.comparison_box.addItem(">=")
+                    self.comparison_box.addItem("==")
+                    self.comparison_box.addItem("!=")
+                    self.comparison_box.addItem("<=")
+                    self.comparison_box.addItem("<")
+
+                    self.comparison_widget = QtWidgets.QWidget()
+                    self.comparison_layout = QtWidgets.QVBoxLayout()
+                    self.comparison_layout.addWidget(self.comparison_box)
+                    self.comparison_layout.addStretch(1)
+                    self.comparison_layout.setContentsMargins(QtCore.QMargins(0, 0, 0, 0))
+                    
+                    self.comparison_widget.setLayout(self.comparison_layout)
+                    self.comparison_widget.setContentsMargins(QtCore.QMargins(0, 0, 0, 0))
+
+                    self.available_data_tree = self.backend.getAvailableCollectData()
+
+                    num_of_sample_node = {
+                        'type': 'int',
+                        'name': 'Number of samples'
+                    }
+
+                    constant_node = {
+                        'type': 'int',
+                        'name': 'Constant: 0'
+                    }
+
+                    self.const_A = 0
+                    self.condition_A_item_list = []
+                    self.addNodetoConditionTree(self.condition_A, num_of_sample_node, self.condition_A_item_list)
+                    self.addNodetoConditionTree(self.condition_A, constant_node, self.condition_A_item_list, self.constantClickedHandler, self.const_A)
+                    self.selected_A = None
+
+                    for node in self.available_data_tree:
+                        self.addNodetoConditionTree(self.condition_A, node, self.condition_A_item_list)
+
+                    self.const_B = 0
+                    self.condition_B_item_list = []
+                    self.addNodetoConditionTree(self.condition_B, num_of_sample_node, self.condition_B_item_list)
+                    self.addNodetoConditionTree(self.condition_B, constant_node, self.condition_B_item_list, self.constantClickedHandler, self.const_B)
+                    self.selected_B = None
+
+                    for node in self.available_data_tree:
+                        self.addNodetoConditionTree(self.condition_B, node, self.condition_B_item_list)
+
+                    self.ok_button = QtWidgets.QPushButton('OK')
+                    self.ok_button.clicked.connect(self.okButtonClickedHandler)
+                    self.ok_button_widget = QtWidgets.QWidget()
+                    self.ok_button_layout = QtWidgets.QVBoxLayout()
+                    self.ok_button_layout.addWidget(self.ok_button)
+                    self.ok_button_layout.addStretch(1)
+                    self.ok_button_layout.setContentsMargins(QtCore.QMargins(0, 0, 0, 0))
+                    
+                    self.ok_button_widget.setLayout(self.ok_button_layout)
+                    self.ok_button_widget.setContentsMargins(QtCore.QMargins(0, 0, 0, 0))
+
+                    self.main_layout.addWidget(self.condition_A)
+                    self.main_layout.addWidget(self.comparison_widget)
+                    self.main_layout.addWidget(self.condition_B)
+                    self.main_layout.addWidget(self.ok_button_widget)
+                    self.main_layout.setAlignment(QtCore.Qt.AlignTop)
+
+                def okButtonClickedHandler(self):
+                    self.backend.addTrigger(self.selected_A.text(0), self.selected_B.text(0), self.comparison_box.currentText(), self.name)
+                    self.close()
+
+                def conditionATreeChangedHandler(self, item, column):
+                    if item.childCount() == 0:
+                        self.clearCheckState(self.condition_A_item_list)
+                        item.setCheckState(0, QtCore.Qt.Checked)
+                        self.selected_A = item
+
+                def conditionBTreeChangedHandler(self, item, column):
+                    if item.childCount() == 0:
+                        self.clearCheckState(self.condition_B_item_list)
+                        item.setCheckState(0, QtCore.Qt.Checked)
+                        self.selected_B = item
+
+                def conditionATreeDoubleClickedHandler(self, item, column):
+                    if item.callback_func != None:
+                        item.callback_func(item, item.callback_obj, 'DOUBLE_CLICKED')
+
+                def conditionBTreeDoubleClickedHandler(self, item, column):
+                    if item.callback_func != None:
+                        item.callback_func(item, item.callback_obj, 'DOUBLE_CLICKED')
+
+                def constantClickedHandler(self, item, callback_obj, callback_type):
+                    if callback_type == 'DOUBLE_CLICKED':
+                        value, ok = QtWidgets.QInputDialog.getDouble(self, 'Constant value', 'Enter number')
+                        if ok:
+                            item.setText(0, 'Constant: ' + str(value))
+
+                def clearCheckState(self, item_list):
+                    for item in item_list:
+                        if item.childCount() == 0:
+                            item.setCheckState(0, QtCore.Qt.Unchecked)
+
+                def addNodetoConditionTree(self, tree, node, condition_item_list, callback=None, callback_obj=None):
+                    child = self.TreeWidgetItemWrapper(callback_obj, callback, tree)
+                    child.setText(0, node['name'])
+                    if node['type'] == 'list':
+                        node_list = node['data']
+                        for node in node_list:
+                            self.addNodetoConditionTree(child, node, condition_item_list)
+                    else:
+                        child.setFlags(child.flags() | QtCore.Qt.ItemIsUserCheckable)
+                        child.setCheckState(0, QtCore.Qt.Unchecked)
+
+                    condition_item_list.append(child)
+
+            def addStartTriggerButtonClickedHandler(self):
+                self.dialog = self.AddDataTriggerDialog(self.backend, 'START_TRIGGER')
+                self.dialog.show()
+
 
         class EthercatCollectPage(QtWidgets.QDialog):
             def __init__(self, parent=None):
@@ -131,7 +509,7 @@ class MachineActionPage(QtWidgets.QDialog):
             self.main_widget.setParent(None)
             del self.main_widget
             if current_type == 'GENERIC':
-                self.main_widget = self.GenericCollectPage(self.current_node_name, self.backend)
+                self.main_widget = self.GenericCollectPage(self.current_node_name, self.backend, self)
             else:
                 self.main_widget = self.EthercatCollectPage()
             self.main_layout.addWidget(self.main_widget, stretch=20)
@@ -147,8 +525,9 @@ class MachineActionPage(QtWidgets.QDialog):
             super().__init__(parent)
             self.setStyleSheet('background-color: grey;')
 
-    def __init__(self, backend, parent=None):
+    def __init__(self, backend, name, parent=None):
         super().__init__(parent)
+        self.name = name
         self.backend = backend
         self.backend.all_node_received_signal.connect(self.list_of_node_received_slot)
         self.backend.node_type_received.connect(self.nodeTypeReceiveHandler)
@@ -351,7 +730,7 @@ class App(QtWidgets.QDialog):
 
     def open_tab_slot(self, name, address):
         if name not in self.opened_tab_name_list:
-            self.work_tab = MachineActionPage(self.backend.createWorkstationBackend(address))
+            self.work_tab = MachineActionPage(self.backend.createWorkstationBackend(address), name, self)
             self.tab_widget.addTab(self.work_tab, name)
             self.opened_tab_name_list.append(name)
         idx = 0

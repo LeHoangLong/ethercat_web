@@ -1,0 +1,1 @@
+{"machine_0": {"save_location": "", "data_collect_list": {"test_node/pdo/test_data": {"data_type": "int", "collect_type": "DEFAULT"}}}}
