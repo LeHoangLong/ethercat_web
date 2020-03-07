@@ -32,7 +32,7 @@ class DictionaryDataStreamer(DataStreamer):
         }
 
         if param != None:
-            new_message['param'] = param
+            new_message['params'] = param
 
         self.pending_message_list.append(new_message)
         if reply_handler != None:
@@ -77,7 +77,7 @@ class DictionaryDataStreamer(DataStreamer):
         self.control_handler_dict[node_name] = control_handler
 
     def receiveMessageHandler(self, message):
-        print(message)
+        #print(message)
         try:
             message_list = json.loads(message)
             for message in message_list:
@@ -89,6 +89,9 @@ class DictionaryDataStreamer(DataStreamer):
                             self.reply_handler_dict[message['idx']](message)
                             self.reply_handler_dict.pop(message['idx'])
                     elif message['type'] == 'control':
+                        if message['value'] == 'set':
+                            print('ok')
+                            pass
                         if 'node' in message and message['node'] in self.control_handler_dict:
                             reply = {
                                 'node': message['node'],

@@ -50,6 +50,11 @@ def create_streamer_1():
     while True:
         pass
 
+    
+def streamer_2_reply_handler(message):
+    print(message)
+    pass
+
 def create_streamer_2():
     my_name = 'le.hoang.long.2@xmpp.jp'
     peer_name = 'le.hoang.long@xmpp'
@@ -73,7 +78,13 @@ def create_streamer_2():
     time.sleep(5)
     streamer_2.sendControl('test_node', 'type', reply_handler=reply_handler)
     streamer_2.addReceiveMessageHandler(message_handler)
+
+    param = {
+        "run": "1"
+    }
+
     while True:
+        streamer_2.sendControl('program', 'get_states', param=param, reply_handler=streamer_2_reply_handler)
         #test_request = [{'list_of_nodes': {'control': 'get'}}, {'test_node_2' : [{'control': 'type'}]}]
         #test_request = [
         #    {'node': 'list_of_nodes', 'type': 'control', 'value': 'get'}

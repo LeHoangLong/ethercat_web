@@ -52,7 +52,7 @@ class DataStreamer:
 
     def handle_probe(self, presence):
         sender = presence['from']
-        self.send_presence(pto=sender)
+        self.client_xmpp.send_presence(pto=sender)
 
     def probe_presence(self):
         for peer in self.peer_list:
@@ -131,7 +131,7 @@ class DataStreamer:
     def handleSubscribed(self, presence):
         self.client_xmpp.update_roster(presence['from'])
         contact = {
-            'jid': roster,
+            'jid': presence['from'].bare,
             'status': 'UNAVAILABLE'
         }
         self.peer_list.append(contact)

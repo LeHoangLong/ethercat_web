@@ -1,4 +1,4 @@
-#!/home/long/git/ethercat_web/venv_2/bin/python3
+#!/home/long/git/ethercat_web/venv_2/bin/python3.6
 # -*- coding: utf-8 -*-
 import re
 import sys

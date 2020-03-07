@@ -22,6 +22,13 @@ class SlaveHandler:
         root_node = ET.Element(self.node_name)
         control_val = message['value']
         control_node = self.client.generateControl(control_val, idx)
+        if 'params' in message:
+            param_node = message['params']
+            param_tree = ET.SubElement(control_node, 'params')
+            param_tree.attrib['value'] = '[]' #list of params
+            for param_name, param_val in message['params'].items():
+                param_element = ET.SubElement(param_tree, param_name)
+                param_element.attrib['value'] = param_val
         root_node.append(control_node)
         ET.dump(root_node)
         self.client.sendToEthercat(root_node)
