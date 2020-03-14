@@ -22,8 +22,11 @@ class AnalyzerBackend(QtCore.QObject):
         for collected_file in file_list:
             collected_file_0 = open(collected_file)
         if collected_file_0 != None:
-            self.collected_data = json.loads(collected_file_0.read(), object_pairs_hook=OrderedDict)
-            self.collected_data_updated_signal.emit()
-
+            try:
+                self.collected_data = json.loads(collected_file_0.read(), object_pairs_hook=OrderedDict)
+                self.collected_data_updated_signal.emit()
+            except Exception as e:
+                print(e)
+                
     def getCollectedData(self):
         return self.collected_data

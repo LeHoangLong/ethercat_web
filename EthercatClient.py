@@ -42,8 +42,6 @@ class EthercatClient():
                         if control_dest.attrib['value'] == 'login':
                             result_node = control_dest.find('result')
                             if result_node == None or result_node.attrib['value'] != 'ok':
-                                print(result_node)
-                                print(result_node.attrib['value'])
                                 print('close socket')
                                 self.socket.close()
                             else:
@@ -74,15 +72,20 @@ class EthercatClient():
             for i in range(len(data_string)):
                 c = data_string[i:i+1]
                 if c == b'\0':
-                    root = ET.fromstring(string_segment)
-                    #ET.dump(root)
-                    #root = message.find('xml')
-                    for node in root:
-                        source = node.tag
-                        if source in self.callback_map:
-                            self.callback_map[source](node)
+                    #print(string_segment)
+                    try:
+                        root = ET.fromstring(string_segment)
+                        ET.dump(root)
+                        #root = message.find('xml')
+                        for node in root:
+                            source = node.tag
+                            if source in self.callback_map:
+                                self.callback_map[source](node)
 
-                    string_segment = b''
+                        string_segment = b''
+                    except Exception as e:
+                        print(e)
+                        print(string_segment)
                 else:
                     string_segment += c
             data_string = string_segment

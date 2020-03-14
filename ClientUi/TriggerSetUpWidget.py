@@ -10,6 +10,7 @@ class TriggerSetUpWidget(QtWidgets.QWidget):
         self.start_trigger_add_button = QtWidgets.QPushButton("Add start trigger")
         self.start_trigger_add_button.clicked.connect(self.addStartTriggerButtonClickedHandler)
         self.start_trigger_remove_button = QtWidgets.QPushButton("Remove start trigger")
+        self.start_trigger_remove_button.clicked.connect(self.removeStartTriggerButtonClickedHandler)
 
         self.start_trigger_add_remove_button_layout = QtWidgets.QHBoxLayout()
         self.start_trigger_add_remove_button_layout.addWidget(self.start_trigger_add_button)
@@ -37,6 +38,7 @@ class TriggerSetUpWidget(QtWidgets.QWidget):
         self.end_trigger_add_button.clicked.connect(self.addEndTriggerButtonClickedHandler)
         
         self.end_trigger_remove_button = QtWidgets.QPushButton("Remove start trigger")
+        self.end_trigger_remove_button.clicked.connect(self.removeEndTriggerButtonClickedHandler)
 
         self.end_trigger_add_remove_button_layout = QtWidgets.QHBoxLayout()
         self.end_trigger_add_remove_button_layout.addWidget(self.end_trigger_add_button)
@@ -76,6 +78,20 @@ class TriggerSetUpWidget(QtWidgets.QWidget):
         self.start_dialog.selected_trigger_signal.connect(self.selectedStartTriggerSignalHandler)
         self.start_dialog.show()
         pass
+
+    def removeStartTriggerButtonClickedHandler(self):
+        del self.start_trigger_list[self.start_trigger_condition_list_widget.currentRow()]
+        self.start_trigger_condition_list_widget.takeItem(self.start_trigger_condition_list_widget.currentRow())
+
+    def addEndTriggerButtonClickedHandler(self):
+        self.end_dialog = AddDataTriggerDialog(self.backend)
+        self.end_dialog.selected_trigger_signal.connect(self.selectedEndTriggerSignalHandler)
+        self.end_dialog.show()
+        pass
+
+    def removeEndTriggerButtonClickedHandler(self):
+        del self.end_trigger_list[self.end_trigger_condition_list_widget.currentRow()]
+        self.end_trigger_condition_list_widget.takeItem(self.end_trigger_condition_list_widget.currentRow())
 
     def treeChangedHandler(self, item, column):
         path = item.text(0)
@@ -117,11 +133,6 @@ class TriggerSetUpWidget(QtWidgets.QWidget):
                 self.start_trigger_condition_list_widget.addItem(trigger_str)
                 self.start_trigger_list.append(trigger)
 
-    def addEndTriggerButtonClickedHandler(self):
-        self.end_dialog = AddDataTriggerDialog(self.backend)
-        self.end_dialog.selected_trigger_signal.connect(self.selectedEndTriggerSignalHandler)
-        self.end_dialog.show()
-        pass
 
     def selectedEndTriggerSignalHandler(self, trigger_list):
         for trigger in trigger_list:

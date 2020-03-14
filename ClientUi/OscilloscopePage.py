@@ -51,7 +51,7 @@ class ChannelSelect(QtWidgets.QWidget):
         return is_enabled
 
 class SelectChannelDialog(QtWidgets.QDialog):
-    channel_selected_signal = QtCore.pyqtSignal(str)
+    channel_selected_signal = QtCore.pyqtSignal(str, str)
     def __init__(self, backend, parent=None):
         super().__init__(parent)
         self.backend = backend
@@ -71,8 +71,9 @@ class SelectChannelDialog(QtWidgets.QDialog):
 
     def okClickHandler(self):
         selected_data_name = self.node_tree.getSelectedDataName()
+        selected_data_type = self.node_tree.getSelectedDataType()
         if selected_data_name != None:
-            self.channel_selected_signal.emit(selected_data_name)
+            self.channel_selected_signal.emit(selected_data_name, selected_data_type)
         self.close()
 
 
@@ -104,6 +105,7 @@ class OscilloscopePage(QtWidgets.QWidget):
                 'y': [],
                 'channel_select_widget': channel,
                 'data_name': '',
+                'data_type': 'int',
                 'data_watcher': partial(self.dataWatchHandler, channel_number=i),
                 'color': color_list[i],
                 'counter': 0
@@ -125,42 +127,39 @@ class OscilloscopePage(QtWidgets.QWidget):
         self.channel_select_dialog.setModal(True)
         pass
 
-    def channelUpdateHandler(self, data_name, channel_number):
+    def channelUpdateHandler(self, data_name, data_type, channel_number):
         self.channel_list[channel_number]['channel_select_widget'].setDataName(data_name)
         self.channel_list[channel_number]['data_name'] = data_name
+        self.channel_list[channel_number]['data_type'] = data_type
 
     def playButtonClickHandler(self):
 
         for channel_number, channel in enumerate(self.channel_list):
             channel_select_widget = channel['channel_select_widget']
+            self.backend.removeDataWatch(self.channel_list[channel_number]['data_watcher'])
             if channel_select_widget.isEnabled():
-                self.backend.addDataWatch(self.channel_list[channel_number]['data_watcher'], channel['data_name'])
-            else:
-                self.backend.removeDataWatch(self.channel_list[channel_number]['data_watcher'])
+                self.backend.addDataWatch(self.channel_list[channel_number]['data_watcher'], channel['data_name'], channel['data_type'])
 
         self.backend.enableDataCollection()
 
     def stopButtonClickHandler(self):
         self.backend.disableDataCollection()
 
-    def dataWatchHandler(self, data, time, channel_number):
+    def dataWatchHandler(self, data, time, data_type, channel_number):
         #self.data_lock.acquire()
         channel = self.channel_list[channel_number]
         if len(channel['t']) > 150:
             del channel['t'][0]
             del channel['y'][0]
 
-        channel['t'].append(int(time))
-        channel['y'].append(int(data))
-
-        if (channel['y'] == 99):
-            print('ok')
-            pass
+        if data_type == 'int' or data_type == 'float':
+            channel['t'].append(time)
+            channel['y'].append(data)
+            channel['counter'] += 1
 
         if channel['counter'] > 20:
             channel['counter'] = 0
             self.updateGraphSignal.emit(channel_number)
-        channel['counter'] += 1
         #self.data_lock.release()
         #if line in self.ax.lines:
         #    self.ax.lines.remove(line)

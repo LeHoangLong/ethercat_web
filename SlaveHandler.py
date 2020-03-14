@@ -35,7 +35,6 @@ class SlaveHandler:
 
     def receive_handler(self, node):
         reply = None
-        ET.dump(node)
         if node.tag == self.node_name:
             for child in node:
                 if child.tag == 'result':
@@ -51,7 +50,6 @@ class SlaveHandler:
                         if grandchild.tag == 'return' and reply != None:
                             reply['return'] = self.eTreeToDict(grandchild)
                             string_to_send = json.dumps(reply) 
-                            print(string_to_send)
                             self.streamer.sendReply(reply)
                             pass
                 elif child.tag == 'message':
@@ -60,27 +58,30 @@ class SlaveHandler:
                     if time != None:
                         time = time.attrib['value']
                     data = self.eTreeToDict(child.find('data'))
-                    self.streamer.sendMessage(self.node_name, value, time=time, data=data)
+                    if data != None:
+                        self.streamer.sendMessage(self.node_name, value, time=time, data=data)
 
     def eTreeToDict(self, tree):
-        ET.dump(tree)
-        if 'value' in tree.attrib and tree.attrib['value'] == '[]':
-            final_list = []
-            for child in tree:
-                final_list.append(self.eTreeToDict(child))
-            return final_list
-        else:
-            if len(tree.getchildren()) == 0:
-                if 'value' in tree.attrib:
-                    return tree.attrib['value']
-                else:
-                    return tree.tag
-            else:
-                final_dict = {}
-                if 'value' in tree.attrib:
-                    final_dict['value'] = tree.attrib['value']
+        if tree != None:
+            if 'value' in tree.attrib and tree.attrib['value'] == '[]':
+                final_list = []
                 for child in tree:
-                    if child.tag != 'idx' and child.tag != 'value':
-                        node_dict = self.eTreeToDict(child)
-                        final_dict[child.tag] = node_dict
-                return final_dict
+                    final_list.append(self.eTreeToDict(child))
+                return final_list
+            else:
+                if len(tree.getchildren()) == 0:
+                    if 'value' in tree.attrib:
+                        return tree.attrib['value']
+                    else:
+                        return tree.tag
+                else:
+                    final_dict = {}
+                    if 'value' in tree.attrib:
+                        final_dict['value'] = tree.attrib['value']
+                    for child in tree:
+                        if child.tag != 'idx' and child.tag != 'value':
+                            node_dict = self.eTreeToDict(child)
+                            final_dict[child.tag] = node_dict
+                    return final_dict
+        else:
+            return None

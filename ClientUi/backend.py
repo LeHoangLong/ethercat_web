@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from DictionaryDataStreamer import DictionaryDataStreamer
 from threading import Thread
 import time
+from Trigger import *
 
 class AppBackend(QtCore.QObject):
     presence_updated_signal = QtCore.pyqtSignal()
@@ -72,80 +73,6 @@ class InterpolateDataCollector(DataCollector):
         return_dict['intercept'] = model.intercept_
         return return_dict
 
-class NumberOfSamplesTrigger():
-    def __init__(self):
-        self.sample_count = 0
-
-    def updateData(self, data):
-        self.sample_count += 1
-    
-    def getValue(self):
-        return self.sample_count
-    
-    def reset(self):
-        self.sample_count = 0
-
-class ConstantTrigger():
-    def __init__(self, value):
-        self.value = value
-        pass
-
-    def updateData(self, data):
-        pass
-
-    def getValue(self):
-        return self.value
-
-    def reset(self):
-        pass
-
-class ValueTrigger():
-    def __init__(self):
-        self.data = 0
-        pass
-
-    def updateData(self, data):
-        self.data = data
-        pass
-
-    def getValue(self):
-        return self.data
-
-    def reset(self):
-        pass
-
-class Comparator():
-    def __init__(self, comparison_type, callback):
-        self.comparison_type = comparison_type
-        self.callback = callback
-
-    def compare(self, value_1, value_2):
-        condition_met = False
-        if self.comparison_type == '>':
-            if value_1 > value_2:
-                condition_met = True
-        elif self.comparison_type == '>=':
-            if value_1 >= value_2:
-                condition_met = True
-        elif self.comparison_type == '==':
-            if value_1 == value_2:
-                condition_met = True
-        elif self.comparison_type == '!=':
-            if value_1 != value_2:
-                condition_met = True
-        elif self.comparison_type == '<=':
-            if value_1 <= value_2:
-                condition_met = True
-        elif self.comparison_type == '<':
-            if value_1 < value_2:
-                condition_met = True
-
-        if condition_met and self.callback != None:
-            self.callback()
-            return True
-        else:
-            return False
-
 class WorkstationBackend(QtCore.QObject):
     class ConnectionStatus(Enum):
         DISCONNECTED = 0
@@ -177,22 +104,12 @@ class WorkstationBackend(QtCore.QObject):
         self.is_collecting_data = False
         self.trigger_count = 0
         self.sample_count = 0
-        self.start_condition_A = {
-            'name': '',
-            'obj': None
-        }
-        self.start_condition_B = {
-            'name': '',
-            'obj': None
-        }
-        self.end_condition_A = {
-            'name': '',
-            'obj': None
-        }
-        self.end_condition_B = {
-            'name': '',
-            'obj': None
-        }
+        
+        self.start_trigger_map = {}
+        self.start_comparator_list = []
+        self.end_trigger_map = {}
+        self.end_comparator_list = []
+
         self.start_comparator = None
         self.end_comparator = None
         self.save_path = None
@@ -204,8 +121,8 @@ class WorkstationBackend(QtCore.QObject):
         self.data_collection_enabled = False
         self.program_state = {}
         self.data_watch_map = {}
-        self.thread = Thread(target=self.__updateProgramState)
-        self.thread.start()
+
+        self.streamer.addReceiveMessageHandler(self.programStateReceiveHandler)
 
     def connection_req_handler(self, req):
         if req == self.ConnectionRequest.CONNECT and self.connection_status == self.ConnectionStatus.DISCONNECTED:
@@ -224,32 +141,64 @@ class WorkstationBackend(QtCore.QObject):
         self.streamer.sendControl('list_of_nodes', 'get', reply_handler=self.listOfNodeReplyReceiveHandler)
 
     def getAvailableCollectData(self, node_name):
-        available_data = [
-            {
-                'name': 'rx_pdo',
-                'type': 'list',
-                'data': [
-                    {
-                        'name': 'test_data',
-                        'type': 'int'
-                    }
-                ]
-            },
-        ]
+        available_data = []
+        if node_name == "test_node":
+            available_data = [
+                {
+                    'name': 'rx_pdo',
+                    'type': 'list',
+                    'data': [
+                        {
+                            'name': 'test_data',
+                            'type': 'int'
+                        }
+                    ]
+                },
+            ]
+        elif node_name == "motor_1":
+            available_data = [
+                {
+                    'name': 'current_motor_profile',
+                    'type': 'list',
+                    'data': [
+                        {
+                            'name': 'feedback_acceleration',
+                            'type': 'float'
+                        },
+                        {
+                            'name': 'feedback_velocity',
+                            'type': 'float'
+                        },
+                        {
+                            'name': 'feedback_position',
+                            'type': 'float'
+                        },
+                        {
+                            'name': 'motor_status',
+                            'type': 'int'
+                        }
+                    ]
+                }
+            ]
+        elif node_name == 'program':
+            available_data = [
+                {
+                    'name': 'program_states',
+                    'type': 'list',
+                    'data': [
+                        {
+                            'name': 'run_counter',
+                            'type': 'int'
+                        }
+                    ]
+                }
+            ]
         return available_data
 
     def setSaveLocation(self, path):
         self.save_path = path
         self.current_file_idx = 0
         self.current_file_length = 0
-
-    def createTriggerHandler(self, condition_name):
-        if condition_name == '/Number of samples':
-            return NumberOfSamplesTrigger()
-        elif condition_name.split(':')[0] == '/Constant':
-            return ConstantTrigger(float(condition_name.split(':')[1]))
-        else:
-            return ValueTrigger()
 
     def startTriggerHandler(self):
         if self.is_collecting_data == False:
@@ -296,21 +245,58 @@ class WorkstationBackend(QtCore.QObject):
             if len(current_collect_data) > 1:
                 self.collected_data_list.append(current_collect_data)
 
-    def setTrigger(self, condition_A, condition_B, comparison_type, trigger_type):
+    def clearTrigger(self, trigger_type):
         if trigger_type == 'START_TRIGGER':
-            self.start_condition_A['name'] = condition_A
-            self.start_condition_A['obj'] = self.createTriggerHandler(condition_A)
-            self.start_condition_B['name'] = condition_B
-            self.start_condition_B['obj'] = self.createTriggerHandler(condition_B)
-            self.start_comparator = Comparator(comparison_type, self.startTriggerHandler)
-        elif trigger_type == 'END_TRIGGER':
-            self.end_condition_A['name'] = condition_A
-            self.end_condition_A['obj'] = self.createTriggerHandler(condition_A)
-            self.end_condition_B['name'] = condition_B
-            self.end_condition_B['obj'] = self.createTriggerHandler(condition_B)
-            self.end_comparator = Comparator(comparison_type, self.endTriggerHandler)
-        pass
+            self.start_trigger_map = {}
+            self.start_comparator_list = []
+        if trigger_type == 'END_TRIGGER':
+            self.end_trigger_map = {}
+            self.end_comparator_list = []
 
+    def addTrigger(self, trigger_info, trigger_type):
+        if trigger_type == 'START_TRIGGER':
+            if trigger_info['condition_A'] not in self.start_trigger_map:
+                self.start_trigger_map[trigger_info['condition_A']] = {}
+                self.start_trigger_map[trigger_info['condition_A']]['data_type'] = trigger_info['condition_A_type']
+                self.start_trigger_map[trigger_info['condition_A']]['trigger'] = []
+            trigger_1 = self.__createTriggerHandler(trigger_info['condition_A'])
+            self.start_trigger_map[trigger_info['condition_A']]['trigger'].append(trigger_1)
+
+            if trigger_info['condition_B'] not in self.start_trigger_map:
+                self.start_trigger_map[trigger_info['condition_B']] = {}
+                self.start_trigger_map[trigger_info['condition_B']]['data_type'] = trigger_info['condition_B_type']
+                self.start_trigger_map[trigger_info['condition_B']]['trigger'] = []
+            trigger_2 = self.__createTriggerHandler(trigger_info['condition_B'])
+            self.start_trigger_map[trigger_info['condition_B']]['trigger'].append(trigger_2)
+
+            self.start_comparator_list.append(Comparator(trigger_info['comparison'], trigger_1, trigger_2))
+        
+        elif trigger_type == 'END_TRIGGER':
+            if trigger_info['condition_A'] not in self.end_trigger_map:
+                self.end_trigger_map[trigger_info['condition_A']] = {}
+                self.end_trigger_map[trigger_info['condition_A']]['data_type'] = trigger_info['condition_A_type']
+                self.end_trigger_map[trigger_info['condition_A']]['trigger'] = []
+            trigger_1 = self.__createTriggerHandler(trigger_info['condition_A'])
+            self.end_trigger_map[trigger_info['condition_A']]['trigger'].append(trigger_1)
+
+            if trigger_info['condition_B'] not in self.end_trigger_map:
+                self.end_trigger_map[trigger_info['condition_B']] = {}
+                self.end_trigger_map[trigger_info['condition_B']]['data_type'] = trigger_info['condition_B_type']
+                self.end_trigger_map[trigger_info['condition_B']]['trigger'] = []
+            trigger_2 = self.__createTriggerHandler(trigger_info['condition_B'])
+            self.end_trigger_map[trigger_info['condition_B']]['trigger'].append(trigger_2)
+            
+            self.end_comparator_list.append(Comparator(trigger_info['comparison'], trigger_1, trigger_2))
+        
+
+    def __createTriggerHandler(self, condition_name):
+        if condition_name == '/Number of samples':
+            return NumberOfSamplesTrigger()
+        elif condition_name.split(':')[0] == '/Constant':
+            return ConstantTrigger(float(condition_name.split(':')[1]))
+        else:
+            return ValueTrigger()
+    
     def setCollector(self, collector_list):
         self.data_collector_list = {}
         for collector_info in collector_list:
@@ -345,7 +331,8 @@ class WorkstationBackend(QtCore.QObject):
                     self.data_collector_list[data_name] = {
                         'data_type': data_type,
                         'data': [],
-                        'collector_list': []
+                        'collector_list': [],
+                        'trigger_handler_list': []
                     }
 
                 self.data_collector_list[data_name]['collector_list'].append(collector_map)
@@ -385,27 +372,47 @@ class WorkstationBackend(QtCore.QObject):
         self.node_type_received.emit(reply['node'], type_list)
 
     def receiveMessageHandler(self, message):
-        #extract data and name
-        #print('enable: ' + str(self.data_collection_enabled))
-        #print('collecting: ' + str(self.is_collecting_data))
         if self.data_collection_enabled:
             data_list = []
             prefix = '/' + message['node'] + '/' + message['value']
-            if self.start_condition_A['name'] == '/Number of samples' or self.start_condition_A['name'] == '/Constant':
-                self.start_condition_A['obj'].updateData(0)
-            if self.start_condition_B['name'] == '/Number of samples' or self.start_condition_B['name'] == '/Constant':
-                self.start_condition_B['obj'].updateData(0)
-            
-            if self.end_condition_A['name'] == '/Number of samples' or self.end_condition_A['name'] == '/Constant':
-                self.end_condition_A['obj'].updateData(0)
-            if self.end_condition_B['name'] == '/Number of samples' or self.end_condition_B['name'] == '/Constant':
-                self.end_condition_B['obj'].updateData(0)
-            
+
+            if '/Number of samples' in self.start_trigger_map:
+                trigger_list = self.start_trigger_map['/Number of samples']
+                for trigger in trigger_list:
+                    trigger.updateData(0)
+
+            if '/Number of samples' in self.end_trigger_map:
+                trigger_list = self.end_trigger_map['/Number of samples']
+                for trigger in trigger_list:
+                    trigger.updateData(0)
+
             if 'time' in message:
-                time = message['time']
+                time = int(message['time'])
             else:
                 time = None
             self.extractDataFromMessage(time, message['data'], data_list, prefix)
+            
+            condition_met = len(self.start_comparator_list) > 0
+            for start_comparator in self.start_comparator_list:
+                start_comparator.compare()
+                if not start_comparator.isConditionMet():
+                    condition_met = False
+                    break
+            if condition_met:
+                self.startTriggerHandler()
+                for start_comparator in self.start_comparator_list:
+                    start_comparator.reset()
+
+            condition_met = len(self.end_comparator_list) > 0
+            for end_comparator in self.end_comparator_list:
+                end_comparator.compare()
+                if not end_comparator.isConditionMet():
+                    condition_met = False
+                    break
+            if condition_met:
+                self.endTriggerHandler()
+                for end_comparator in self.end_comparator_list:
+                    end_comparator.reset()
 
     def extractDataFromMessage(self, time, data_dict, extracted_list, prefix=None):
         for data_name in data_dict:
@@ -414,40 +421,53 @@ class WorkstationBackend(QtCore.QObject):
                 self.extractDataFromMessage(time, data_dict[data_name], extracted_list, path)
             else:
                 full_name = prefix + '/' + data_name
+
+                if full_name in self.start_trigger_map:
+                    trigger_list = self.start_trigger_map[full_name]['trigger']
+                    type_str = self.start_trigger_map[full_name]['data_type']
+                    data = None
+                    if type_str == 'int':
+                        data = int(data_dict[data_name])
+                    elif type_str == 'float':
+                        data = float(data_dict[data_name])
+                    for trigger in trigger_list:
+                        trigger.updateData(data)
+
+                if full_name in self.end_trigger_map:
+                    trigger_list = self.end_trigger_map[full_name]['trigger']
+                    type_str = self.end_trigger_map[full_name]['data_type']
+                    data = None
+                    if type_str == 'int':
+                        data = int(data_dict[data_name])
+                    elif type_str == 'float':
+                        data = float(data_dict[data_name])
+                    for trigger in trigger_list:
+                        trigger.updateData(data)
+
                 if full_name in self.data_collector_list:
                     collector_map = self.data_collector_list[full_name]
                     type_str = collector_map['data_type']
                     data = None
                     if type_str == 'int':
                         data = int(data_dict[data_name])
+                    elif type_str == 'float':
+                        data = float(data_dict[data_name])
                     if data != None:
-                        if self.start_condition_A['obj'] != None and full_name == self.start_condition_A['name']:
-                            self.start_condition_A['obj'].updateData(data)
-                        if self.start_condition_B['obj'] != None and full_name == self.start_condition_B['name']:
-                            self.start_condition_B['obj'].updateData(data)
-                        if self.end_condition_A['obj'] != None and full_name == self.end_condition_A['name']:
-                            self.end_condition_A['obj'].updateData(data)
-                        if self.end_condition_B['obj'] != None and full_name == self.end_condition_B['name']:
-                            self.end_condition_B['obj'].updateData(data)
-                        
-                        if self.start_comparator != None and self.start_condition_A['obj'] != None and self.start_condition_B['obj'] != None:
-                            if self.start_comparator.compare(self.start_condition_A['obj'].getValue(), self.start_condition_B['obj'].getValue()):
-                                self.start_condition_A['obj'].reset()
-                                self.start_condition_B['obj'].reset()
-        
-                        if self.end_comparator != None and self.end_condition_A['obj'] != None and self.end_condition_B['obj'] != None:
-                            if self.end_comparator.compare(self.end_condition_A['obj'].getValue(), self.end_condition_B['obj'].getValue()):
-                                self.end_condition_A['obj'].reset()
-                                self.end_condition_B['obj'].reset()
-                    
                         if self.is_collecting_data:
+                            print(data)
                             collector_map['data'].append(data)
-                        pass
                     
                 if full_name in self.data_watch_map:
-                    watcher_list = self.data_watch_map[full_name]
+                    watcher_list = self.data_watch_map[full_name]['handler']
+                    data_type = self.data_watch_map[full_name]['data_type']
+                    data = None
+                    if data_type == 'int':
+                        data = int(data_dict[data_name])
+                    elif data_type == 'float':
+                        data = float(data_dict[data_name])
+
                     for watcher in watcher_list:
-                        watcher(data_dict[data_name], time)
+                        watcher(data, time, data_type)
 
     def presenceUpdateHandler(self, peer_list):
         pass
@@ -459,9 +479,15 @@ class WorkstationBackend(QtCore.QObject):
         self.streamer.sendControl('program', 'set', param=param, reply_handler=self.programStateReceiveHandler)
 
     def programStateReceiveHandler(self, message):
-        return_node = message['return']
-        self.program_state = return_node['states']
-        self.program_state_updated_signal.emit()
+        if message['node'] == 'program':
+            if message['type'] == 'return':
+                return_node = message['return']
+                self.program_state = return_node['states']
+                self.program_state_updated_signal.emit()
+            elif message['type'] == 'message':
+                data_node = message['data']
+                self.program_state = data_node['states']
+                self.program_state_updated_signal.emit()
 
     def getProgramState(self):
         return self.program_state
@@ -471,21 +497,24 @@ class WorkstationBackend(QtCore.QObject):
             self.streamer.sendControl('program', 'get_states', reply_handler=self.programStateReceiveHandler)
             time.sleep(1)
 
-    def addDataWatch(self, data_watcher_handler, data_name):
+    def addDataWatch(self, data_watcher_handler, data_name, data_type):
         if data_name not in self.data_watch_map:
-            self.data_watch_map[data_name] = []
+            self.data_watch_map[data_name] = {
+                'handler': [],
+                'data_type': data_type
+            }
         
-        if data_watcher_handler not in self.data_watch_map[data_name]:
-            self.data_watch_map[data_name].append(data_watcher_handler)
+        if data_watcher_handler not in self.data_watch_map[data_name]['handler']:
+            self.data_watch_map[data_name]['handler'].append(data_watcher_handler)
 
     def removeDataWatch(self, watcher_to_remove):
         if watcher_to_remove != None:
-            for data_watch_map_name, watcher_list in self.data_watch_map.items():
+            for data_watch_map_name, watcher_list_and_data_type in self.data_watch_map.items():
+                watcher_list = watcher_list_and_data_type['handler']
                 for watcher in watcher_list:
                     if watcher == watcher_to_remove:
                         watcher_list.remove(watcher)
                         break
-                if len(watcher_list) == 0:
-                    del self.data_watch_map[data_watch_map_name]
+            self.data_watch_map = {k : v for k,v in self.data_watch_map.items() if len(v['handler']) > 0}
 
 

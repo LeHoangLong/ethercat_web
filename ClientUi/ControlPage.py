@@ -20,10 +20,14 @@ class ControlPage(QtWidgets.QDialog):
         self.backend.sendControlSignal('run', value='1')
 
     def stateUpdateHandler(self):
-        current_state = self.backend.getProgramState()
-        self.state_list_widget.clear()
-        for state_name, state_val in current_state.items():
-            state_str = state_name + ' : ' + state_val
-            state_widget_item = QtWidgets.QListWidgetItem(state_str)
-            self.state_list_widget.addItem(state_widget_item)
+        try:
+            current_state = self.backend.getProgramState()
+            self.state_list_widget.clear()
+            for state_name, state_val in current_state.items():
+                state_str = state_name + ' : ' + state_val
+                state_widget_item = QtWidgets.QListWidgetItem(state_str)
+                self.state_list_widget.addItem(state_widget_item)
+        except Exception as e:
+            print(e)
+            pass
 

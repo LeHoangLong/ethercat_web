@@ -4,6 +4,7 @@ from TriggerSetUpWidget import TriggerSetUpWidget
 from DualButtonWidget import DualButtonWidget
 from CollectDataSetupWidget import CollectDataSetupWidget
 from SelectPath import SelectPath
+from Trigger import Trigger
 import json
 
 class CollectPage(QtWidgets.QWidget):
@@ -271,15 +272,15 @@ class CollectPage(QtWidgets.QWidget):
         #    self.backend.addDataCollector(data_name, data_info['collect_type'], data_info['data_type'])
         self.pending_data = {}
         self.backend.setSaveLocation(self.save_folder)
-        start_trigger = self.trigger_setup_widget.getStartTrigger() #for now use only the first trigger, in reality we will add OR/AND relationship
-        if len(start_trigger) > 0:
-            start_trigger = start_trigger[0]
-            self.backend.setTrigger(start_trigger['condition_A'], start_trigger['condition_B'], start_trigger['comparison'], 'START_TRIGGER')
+
+        self.backend.clearTrigger('START_TRIGGER')
+        for trigger_info in self.trigger_setup_widget.getStartTrigger():
+            self.backend.addTrigger(trigger_info, 'START_TRIGGER')
+
         
-        end_trigger = self.trigger_setup_widget.getEndTrigger()
-        if len(end_trigger) > 0:
-            end_trigger = end_trigger[0]
-            self.backend.setTrigger(end_trigger['condition_A'], end_trigger['condition_B'], end_trigger['comparison'], 'END_TRIGGER')
+        self.backend.clearTrigger('END_TRIGGER')
+        for trigger_info in self.trigger_setup_widget.getEndTrigger():
+            self.backend.addTrigger(trigger_info, 'END_TRIGGER')
 
         added_collector = self.collect_data_widget.getAddedCollector()
         self.backend.setCollector(added_collector)

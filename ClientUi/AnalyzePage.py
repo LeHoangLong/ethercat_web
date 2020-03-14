@@ -12,7 +12,7 @@ class AnalyzePage(QtWidgets.QTabWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.backend = AnalyzerBackend()
-        self.spreadsheet = CollectedSpreadsheet(self)
+        self.spreadsheet = CollectedSpreadsheet(self.backend, self)
         self.addTab(self.spreadsheet, "Sheet")
         self.add_tab_widget = QtWidgets.QWidget(self)
         self.addTab(self.add_tab_widget, QtGui.QIcon.fromTheme('list-add'), '') 

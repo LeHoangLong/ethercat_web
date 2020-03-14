@@ -6,11 +6,12 @@ import json
 from collections import OrderedDict
 
 class CollectedSpreadsheet(QtWidgets.QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, backend, parent=None):
         super().__init__(parent)
         self.select_path = SelectPath('Select saved location')
         self.main_layout = QtWidgets.QVBoxLayout()
         self.setLayout(self.main_layout)
+        self.backend = backend
 
         self.spreadsheet = QtWidgets.QTableWidget()
         self.main_layout.addWidget(self.select_path)
@@ -22,7 +23,8 @@ class CollectedSpreadsheet(QtWidgets.QWidget):
     def selectedPathChangedHandler(self):
         self.table_item_list = []
         path = self.select_path.getSelectedPath()
-        collected_data = self.backend.getCollectedData(path)
+        self.backend.setStoredDataLocation(path)
+        collected_data = self.backend.getCollectedData()
         row_number = 0
         self.spreadsheet.setRowCount(len(collected_data))
         self.spreadsheet.setColumnCount(len(collected_data[0]))

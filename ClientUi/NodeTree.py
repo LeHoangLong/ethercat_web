@@ -16,13 +16,15 @@ class NodeTree(QtWidgets.QTreeWidget):
         self.backend.getAllNodes() #backend will send request for all nodes and a signal will be emitted when the list of node is received
         self.itemClicked.connect(self.itemClickedHandler)
         self.selected_item = None
+        self.selected_type = None
     
     def itemClickedHandler(self, item, column):
         for i in range(self.topLevelItemCount()):
             self.clearCheckState(self.topLevelItem(i))
         if item.childCount() == 0:
             item.setCheckState(0, QtCore.Qt.Checked)
-        self.selected_item = item
+            self.selected_item = item
+            self.selected_type = item.text(1)
         
     def clearCheckState(self, tree_widget_item):
         if tree_widget_item.childCount() > 0:
@@ -63,6 +65,8 @@ class NodeTree(QtWidgets.QTreeWidget):
 
         return full_data_name
 
+    def getSelectedDataType(self):
+        return self.selected_type
 
 
     def setItemFlag(self, flag):

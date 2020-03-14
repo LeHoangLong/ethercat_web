@@ -97,22 +97,17 @@ class AddDataTriggerDialog(QtWidgets.QDialog):
 
     def okButtonClickedHandler(self):
         if self.selected_A != None and self.selected_B != None:
-            condition_A_name = ''
-            itr = self.selected_A
-            while itr != None and itr != self.condition_A:
-                condition_A_name = '/' + itr.text(0) + condition_A_name
-                itr = itr.parent()
-
-            condition_B_name = ''
-            itr = self.selected_B
-            while itr != None and itr != self.condition_B:
-                condition_B_name = '/' + itr.text(0) + condition_B_name
-                itr = itr.parent()
+            condition_A_name = self.condition_A.getSelectedDataName()
+            condition_A_type = self.condition_A.getSelectedDataType()
+            condition_B_name = self.condition_B.getSelectedDataName()
+            condition_B_type = self.condition_B.getSelectedDataType()
 
             trigger_list = [
                 {
                     'condition_A': condition_A_name,
+                    'condition_A_type': condition_A_type,
                     'condition_B': condition_B_name,
+                    'condition_B_type': condition_B_type,
                     'comparison': self.comparison_box.currentText()
                 }
             ]

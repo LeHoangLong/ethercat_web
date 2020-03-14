@@ -47,12 +47,14 @@ class DictionaryDataStreamer(DataStreamer):
             'type': 'message',
             'value': value
         }
+        
 
         if time != None:
             new_message['time'] = time
         if data != None:
             new_message['data'] = data
 
+        print(new_message)
         self.pending_message_list.append(new_message)
         self.flushOut()
         self.message_counter += 1
