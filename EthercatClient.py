@@ -74,13 +74,18 @@ class EthercatClient():
                 if c == b'\0':
                     #print(string_segment)
                     try:
-                        root = ET.fromstring(string_segment)
-                        ET.dump(root)
-                        #root = message.find('xml')
-                        for node in root:
-                            source = node.tag
-                            if source in self.callback_map:
-                                self.callback_map[source](node)
+                        string_list = string_segment.split(b'</xml>')
+                        for string in string_list:
+                            if string.startswith(b'<xml>'):
+                                string = string + b'</xml>'
+                                #print(string)
+                                root = ET.fromstring(string)
+                                ET.dump(root)
+                                #root = message.find('xml')
+                                for node in root:
+                                    source = node.tag
+                                    if source in self.callback_map:
+                                        self.callback_map[source](node)
 
                         string_segment = b''
                     except Exception as e:

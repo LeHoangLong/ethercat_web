@@ -18,13 +18,14 @@ class AnalyzerBackend(QtCore.QObject):
     def setStoredDataLocation(self, path):
         self.path = path
         file_list = [f for f in listdir(path) if isfile(join(path, f)) and 'collected_data_' in f] 
-        collected_file_0 = None
-        for collected_file in file_list:
-            collected_file_0 = open(collected_file)
-        if collected_file_0 != None:
+        collected_file = None
+        self.collected_data = []
+        for collected_file_name in file_list:
             try:
-                self.collected_data = json.loads(collected_file_0.read(), object_pairs_hook=OrderedDict)
-                self.collected_data_updated_signal.emit()
+                collected_file = open(collected_file_name)
+                if collected_file != None:
+                        self.collected_data.extend(json.loads(collected_file.read(), object_pairs_hook=OrderedDict))
+                        self.collected_data_updated_signal.emit()
             except Exception as e:
                 print(e)
                 

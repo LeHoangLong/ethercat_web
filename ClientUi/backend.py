@@ -14,10 +14,11 @@ from Trigger import *
 
 class AppBackend(QtCore.QObject):
     presence_updated_signal = QtCore.pyqtSignal()
-    
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.streamer = DictionaryDataStreamer(name='long_2', domain='long-inspiron-5447',\
+        #self.streamer = DictionaryDataStreamer(name='long_2', domain='long-inspiron-5447',\
+        #    password='123')
+        self.streamer = DictionaryDataStreamer(name='long_2', domain='34.87.175.118',\
             password='123')
         self.streamer.connect(block=True)
         self.workstation_list = []
@@ -210,6 +211,7 @@ class WorkstationBackend(QtCore.QObject):
             if (self.current_file == None or self.current_file_length > 3) and self.save_path != None:
                 if len(self.collected_data_list) > 0 and self.current_file != None:
                     self.current_file.write(json.dumps(self.collected_data_list))
+                    self.collected_data_list = []
                 if self.save_path != '':
                     self.current_file = open(self.save_path + '/collected_data_' + str(self.current_file_idx), 'w')
                 else:
